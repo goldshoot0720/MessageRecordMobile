@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      App 內的顏色全部由 Compose 的 NotiGuardTheme 決定，
+      這裡只負責啟動視窗與系統列，避免冷啟動時閃白畫面。
+    -->
+    <style name="Theme.NotiGuard" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/base</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>

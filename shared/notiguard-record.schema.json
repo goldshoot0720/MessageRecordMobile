@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://notiguard.app/schema/record-1.json",
+  "title": "NotiGuard notification record",
+  "description": "跨平台同步的單筆通知紀錄。Android 匯出與 iOS 匯入共用此格式。",
+  "type": "object",
+  "required": ["uid", "packageName", "appLabel", "postedAt", "blocked", "source"],
+  "properties": {
+    "uid": {
+      "type": "string",
+      "description": "全域唯一鍵。Android 用 sbn.key + postedAt 的雜湊；iOS 用 UNNotificationRequest.identifier。"
+    },
+    "packageName": {
+      "type": "string",
+      "description": "來源套件識別。Android 為 package name；iOS 為 bundle id 或同步來源標記。",
+      "examples": ["jp.naver.line.android", "com.google.android.gm"]
+    },
+    "appLabel": {
+      "type": "string",
+      "description": "顯示名稱，解析失敗時退回 packageName。",
+      "examples": ["LINE", "Gmail"]
+    },
+    "title": { "type": "string", "description": "通知標題，可為空字串。" },
+    "text": { "type": "string", "description": "通知內文，可為空字串。" },
+    "channelId": {
+      "type": ["string", "null"],
+      "description": "Android notification channel id；iOS 為 thread identifier。"
+    },
+    "category": {
+      "type": ["string", "null"],
+      "description": "通知類型。優先取系統分類，取不到時由內容推導。",
+      "examples": ["一般訊息", "群組訊息", "推廣訊息", "系統通知", "交易通知"]
+    },
+    "postedAt": {
+      "type": "integer",
+      "description": "送達時間，Unix epoch 毫秒。"
+    },
+    "removedAt": {
+      "type": ["integer", "null"],
+      "description": "被來源 App 撤回的時間，未撤回為 null。"
+    },
+    "blocked": {
+      "type": "boolean",
+      "description": "true 表示已從通知欄攔下。攔截不刪除紀錄。"
+    },
+    "ongoing": {
+      "type": "boolean",
+      "default": false,
+      "description": "是否為常駐通知（Android FLAG_ONGOING_EVENT）。常駐通知一律不攔截。"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["android_listener", "ios_service_extension", "ios_delivered", "companion_sync", "seed"],
+      "description": "紀錄的取得方式。iOS 上非 companion_sync 的紀錄只可能來自本 App 自己的推播。"
+    },
+    "deviceId": {
+      "type": ["string", "null"],
+      "description": "產生此紀錄的裝置識別，用於多機同步時分辨來源。"
+    }
+  },
+  "additionalProperties": false
+}

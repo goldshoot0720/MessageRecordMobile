@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 見 DESIGN_TOKENS.md。這裡只給啟動視窗用，其餘一律走 Compose。 -->
+    <color name="base">#FF040A14</color>
+</resources>

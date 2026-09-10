@@ -1,0 +1,8 @@
+.gradle/
+**/build/
+**/local.properties
+*.log
+.impeccable/review/
+publish-work/
+*.apk
+**/__pycache__/

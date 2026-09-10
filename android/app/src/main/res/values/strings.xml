@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MessageRecord</string>
+    <string name="listener_label">MessageRecord 通知攔截</string>
+    <string name="tagline">掌控通知 · 更專注的每一天</string>
+</resources>
+
