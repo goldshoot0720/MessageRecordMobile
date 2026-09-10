@@ -20,10 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,7 +27,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -52,6 +47,8 @@ import com.notiguard.ui.Fmt
 import com.notiguard.ui.components.AppGlyph
 import com.notiguard.ui.components.EndNote
 import com.notiguard.ui.components.GuardSwitch
+import com.notiguard.ui.components.IconAction
+import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.components.SegmentedTabs
 import com.notiguard.ui.components.StatusPill
 import com.notiguard.ui.theme.NG
@@ -72,7 +69,7 @@ fun AppDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NG.base)
+            .screenBackground()
             .navigationBarsPadding(),
     ) {
         // ---- 導覽列 ----
@@ -83,16 +80,7 @@ fun AppDetailScreen(
                 .padding(horizontal = 18.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                GuardIcons.Back,
-                contentDescription = "返回",
-                tint = NG.ink,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(9.dp))
-                    .clickable(onClick = onBack)
-                    .padding(14.dp)
-                    .size(20.dp),
-            )
+            IconAction(GuardIcons.Back, "返回", onBack, tint = NG.ink)
             Text(
                 state.appLabel,
                 style = NG.navTitle,
@@ -102,19 +90,32 @@ fun AppDetailScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            IconButton(onClick = onOpenSearch) {
-                Icon(Icons.Filled.Search, "搜尋此應用程式通知", tint = NG.inkMuted)
-            }
+            IconAction(GuardIcons.Search, "搜尋此應用程式通知", onOpenSearch)
             Box {
-                IconButton(onClick = { menuOpen = true }) {
-                    Icon(Icons.Filled.MoreVert, "更多選項", tint = NG.inkMuted)
-                }
-                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                    DropdownMenuItem(text = { Text(if (state.blocking) "允許此應用程式通知" else "攔截此應用程式通知") },
+                IconAction(GuardIcons.More, "更多選項", { menuOpen = true })
+                DropdownMenu(
+                    expanded = menuOpen,
+                    onDismissRequest = { menuOpen = false },
+                    containerColor = NG.card,
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(if (state.blocking) "允許此應用程式通知" else "攔截此應用程式通知", color = NG.ink) },
+                        leadingIcon = {
+                            Icon(
+                                if (state.blocking) GuardIcons.Check else GuardIcons.Block,
+                                null,
+                                tint = if (state.blocking) NG.blueLight else NG.redLight,
+                                modifier = Modifier.size(19.dp),
+                            )
+                        },
                         onClick = { onSetBlocking(!state.blocking); menuOpen = false })
-                    DropdownMenuItem(text = { Text("顯示全部紀錄") },
+                    DropdownMenuItem(
+                        text = { Text("顯示全部紀錄", color = NG.ink) },
+                        leadingIcon = { Icon(GuardIcons.Filter, null, tint = NG.inkMuted, modifier = Modifier.size(19.dp)) },
                         onClick = { onSetFilter(RecordFilter.ALL); menuOpen = false })
-                    DropdownMenuItem(text = { Text("匯出紀錄（JSON）") },
+                    DropdownMenuItem(
+                        text = { Text("匯出紀錄（JSON）", color = NG.ink) },
+                        leadingIcon = { Icon(GuardIcons.Export, null, tint = NG.inkMuted, modifier = Modifier.size(19.dp)) },
                         onClick = { onExport(); menuOpen = false })
                 }
             }
@@ -135,11 +136,25 @@ fun AppDetailScreen(
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(state.appLabel, style = NG.heroName, color = NG.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    "共 ${state.total} 則通知",
-                    fontSize = 13.sp,
-                    color = NG.inkFaint,
-                )
+                Spacer(Modifier.height(5.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(GuardIcons.Message, null, tint = NG.inkFaint, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(5.dp))
+                    Text("共 ${state.total} 則", fontSize = 13.sp, color = NG.inkFaint)
+                    Spacer(Modifier.width(10.dp))
+                    Icon(
+                        if (state.blocking) GuardIcons.Shield else GuardIcons.CheckMark,
+                        null,
+                        tint = if (state.blocking) NG.redLight else NG.blueLight,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        if (state.blocking) "攔截中" else "放行中",
+                        fontSize = 13.sp,
+                        color = if (state.blocking) NG.redLight else NG.blueLight,
+                    )
+                }
             }
             Spacer(Modifier.width(8.dp))
             GuardSwitch(
@@ -159,6 +174,13 @@ fun AppDetailScreen(
             selected = state.filter,
             onSelect = onSetFilter,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            iconFor = {
+                when (it) {
+                    RecordFilter.ALL -> GuardIcons.Apps
+                    RecordFilter.BLOCKED -> GuardIcons.Block
+                    RecordFilter.ALLOWED -> GuardIcons.CheckMark
+                }
+            },
         )
 
         // ---- 紀錄清單，依日期分組 ----

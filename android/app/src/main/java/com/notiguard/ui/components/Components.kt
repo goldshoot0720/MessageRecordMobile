@@ -1,14 +1,25 @@
 package com.notiguard.ui.components
 
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ripple
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -27,6 +38,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -35,7 +47,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.selection.selectableGroup
-import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.geometry.Offset
@@ -162,8 +173,8 @@ fun AppGlyph(
                 drawLine(Color(0xFFEA4335), Offset(w * 0.50f, h * 0.56f), Offset(w * 0.92f, h * 0.25f), stroke)
             }
         } else if (packageName == "com.android.systemui") {
-            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Settings,
-                null, tint = Color.White, modifier = Modifier.size((size * 0.76f).dp))
+            Icon(GuardIcons.Settings, null, tint = Color.White,
+                modifier = Modifier.size((size * 0.72f).dp))
         } else {
         Text(
             text = Brand.short(packageName, appLabel),
@@ -175,22 +186,232 @@ fun AppGlyph(
     }
 }
 
-/** 首頁三格統計中的一格。 */
+/**
+ * 畫面底色：垂直漸層加左上角一圈藍霧。
+ * 純色底在 OLED 上會讓卡片邊界看起來浮起來，加一點光暈才貼得住。
+ */
+fun Modifier.screenBackground(): Modifier = this
+    .background(NG.screenBrush)
+    .drawBehind {
+        val center = Offset(size.width * 0.12f, 0f)
+        val radius = size.width * 0.95f
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0x2E187BFF), Color(0x00187BFF)),
+                center = center,
+                radius = radius,
+            ),
+            radius = radius,
+            center = center,
+        )
+    }
+
+/** 藍底圓角方塊包一顆圖示，品牌列與卡片開頭都用它。 */
+@Composable
+fun GlyphBadge(
+    icon: ImageVector,
+    size: Int = 34,
+    tint: Color = NG.blueLight,
+    background: Color = NG.blueSoft,
+    border: Color = NG.blueLight.copy(alpha = 0.4f),
+) {
+    Box(
+        modifier = Modifier
+            .size(size.dp)
+            .clip(NG.iconShapeSmall)
+            .background(background)
+            .border(1.dp, border, NG.iconShapeSmall),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size((size * 0.56f).dp))
+    }
+}
+
+/** 導覽列上的圖示按鈕：48dp 觸控區、圓角底、按下去有回饋。 */
+@Composable
+fun IconAction(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = NG.inkMuted,
+    filled: Boolean = false,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.9f else 1f, label = "iconPress")
+    Box(
+        modifier = modifier
+            .size(42.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(NG.chipShape)
+            .background(if (filled) NG.cardMuted else Color.Transparent)
+            .border(1.dp, if (filled) NG.lineSoft else Color.Transparent, NG.chipShape)
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(bounded = true, radius = 22.dp),
+                role = Role.Button,
+                onClick = onClick,
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, contentDescription, tint = tint, modifier = Modifier.size(20.dp))
+    }
+}
+
+/** 按鈕語氣。藍＝主要動作，紅＝破壞性，其餘用中性底或純文字。 */
+enum class ButtonTone { Primary, Tonal, Danger, Quiet }
+
+/**
+ * 全 App 共用的按鈕。帶圖示、按下縮放，三種語氣共用同一組尺寸，
+ * 上下並排時邊界會對齊。
+ */
+@Composable
+fun GuardButton(
+    label: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    trailingIcon: ImageVector? = null,
+    tone: ButtonTone = ButtonTone.Primary,
+    fillWidth: Boolean = true,
+    contentColor: Color? = null,
+) {
+    val content = contentColor ?: when (tone) {
+        ButtonTone.Primary -> Color.White
+        ButtonTone.Tonal -> NG.ink
+        ButtonTone.Danger -> NG.redLight
+        ButtonTone.Quiet -> NG.inkMuted
+    }
+    val fill: Brush = when (tone) {
+        ButtonTone.Primary -> NG.actionBrush
+        ButtonTone.Tonal -> NG.tonalBrush
+        ButtonTone.Danger -> NG.dangerBrush
+        ButtonTone.Quiet -> SolidColor(Color.Transparent)
+    }
+    val stroke = when (tone) {
+        ButtonTone.Primary -> NG.blueLight.copy(alpha = 0.5f)
+        ButtonTone.Tonal -> NG.line
+        ButtonTone.Danger -> NG.redLight.copy(alpha = 0.55f)
+        ButtonTone.Quiet -> Color.Transparent
+    }
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.975f else 1f, label = "buttonPress")
+
+    Row(
+        modifier = modifier
+            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(NG.buttonShape)
+            .background(fill, NG.buttonShape)
+            .border(if (tone == ButtonTone.Danger) 1.4.dp else 1.dp, stroke, NG.buttonShape)
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(color = content),
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .padding(horizontal = 16.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (icon != null) {
+            Icon(icon, null, tint = content, modifier = Modifier.size(19.dp))
+            Spacer(Modifier.width(9.dp))
+        }
+        Text(label, fontSize = 15.5f.sp, fontWeight = FontWeight.Medium, color = content)
+        if (trailingIcon != null) {
+            Spacer(Modifier.width(9.dp))
+            Icon(trailingIcon, null, tint = content, modifier = Modifier.size(19.dp))
+        }
+    }
+}
+
+/** 小尺寸的次要按鈕，放在區塊標題右邊或卡片內。 */
+@Composable
+fun ChipButton(
+    label: String,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    tint: Color = NG.blueLight,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.95f else 1f, label = "chipPress")
+    Row(
+        modifier = modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(NG.chipShape)
+            .background(NG.cardMuted)
+            .border(1.dp, NG.lineSoft, NG.chipShape)
+            .clickable(
+                interactionSource = interaction,
+                indication = ripple(color = tint),
+                role = Role.Button,
+                onClick = onClick,
+            )
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(label, fontSize = 13.sp, color = NG.inkMuted)
+    }
+}
+
+/** 區塊標題，左邊一小段藍色標線。 */
+@Composable
+fun SectionHeader(
+    title: String,
+    modifier: Modifier = Modifier,
+    trailing: @Composable (() -> Unit)? = null,
+) {
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            Modifier
+                .width(3.dp)
+                .height(16.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(NG.blueLight),
+        )
+        Spacer(Modifier.width(9.dp))
+        Text(title, style = NG.sectionTitle, color = NG.ink)
+        Spacer(Modifier.weight(1f))
+        trailing?.invoke()
+    }
+}
+
+/** 首頁三格統計中的一格。圖示與數字同色，一眼分得出三格在講什麼。 */
 @Composable
 fun StatTile(
     modifier: Modifier = Modifier,
     value: String,
     label: String,
     valueColor: Color = NG.ink,
+    icon: ImageVector? = null,
 ) {
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
             .background(NG.cardBrush)
             .border(1.dp, NG.line, RoundedCornerShape(14.dp))
-            .padding(vertical = 13.dp, horizontal = 8.dp),
+            .padding(vertical = 12.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        if (icon != null) {
+            Box(
+                modifier = Modifier
+                    .size(26.dp)
+                    .clip(CircleShape)
+                    .background(valueColor.copy(alpha = 0.13f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, null, tint = valueColor, modifier = Modifier.size(15.dp))
+            }
+            Spacer(Modifier.height(7.dp))
+        }
         Text(value, style = NG.statValue, color = valueColor)
         Text(label, style = NG.caption, color = NG.inkFaint)
     }
@@ -247,16 +468,18 @@ fun StatusPill(blocked: Boolean, expanded: Boolean = false) {
         expanded -> "已允許"
         else -> "允許"
     }
-    Text(
-        text = label,
-        style = NG.pill,
-        color = fg,
+    Row(
         modifier = Modifier
             .clip(CircleShape)
             .background(bg)
             .border(1.dp, border, CircleShape)
-            .padding(horizontal = 10.dp, vertical = 3.dp),
-    )
+            .padding(start = 8.dp, end = 10.dp, top = 3.dp, bottom = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(Modifier.size(5.dp).clip(CircleShape).background(fg))
+        Spacer(Modifier.width(5.dp))
+        Text(text = label, style = NG.pill, color = fg)
+    }
 }
 
 /** 全部 / 已攔截 / 已允許 三段切換。 */
@@ -266,6 +489,7 @@ fun <T> SegmentedTabs(
     selected: T,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
+    iconFor: (T) -> ImageVector? = { null },
 ) {
     Row(
         modifier = modifier
@@ -279,20 +503,34 @@ fun <T> SegmentedTabs(
     ) {
         options.forEach { (value, label) ->
             val active = value == selected
-            Box(
+            val background by animateColorAsState(
+                targetValue = if (active) NG.actionBlue else Color.Transparent,
+                label = "segment",
+            )
+            val content by animateColorAsState(
+                targetValue = if (active) Color.White else NG.inkMuted,
+                label = "segmentInk",
+            )
+            val icon = iconFor(value)
+            Row(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(9.dp))
-                    .background(if (active) NG.actionBlue else Color.Transparent)
+                    .background(background)
                     .selectable(selected = active, role = Role.Tab, onClick = { onSelect(value) })
-                    .padding(vertical = 14.dp),
-                contentAlignment = Alignment.Center,
+                    .padding(vertical = 13.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (icon != null) {
+                    Icon(icon, null, tint = content, modifier = Modifier.size(15.dp))
+                    Spacer(Modifier.width(6.dp))
+                }
                 Text(
                     text = label,
                     fontSize = 13.5f.sp,
                     fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
-                    color = if (active) Color.White else NG.inkMuted,
+                    color = content,
                 )
             }
         }

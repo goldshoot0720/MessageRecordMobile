@@ -1,8 +1,12 @@
 package com.notiguard.ui.screens
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,20 +18,26 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.notiguard.ui.components.ButtonTone
+import com.notiguard.ui.components.GuardButton
+import com.notiguard.ui.components.GuardIcons
+import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.theme.NG
 
 /**
@@ -41,23 +51,14 @@ fun PermissionScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NG.base)
+            .screenBackground()
             .padding(horizontal = 28.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Box(
-            modifier = Modifier
-                .size(92.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(NG.blueSoft)
-                .border(1.dp, NG.blueLight.copy(alpha = 0.42f), RoundedCornerShape(24.dp)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Filled.Notifications, null, tint = NG.blueLight, modifier = Modifier.size(46.dp))
-        }
+        HeroShield()
 
-        Spacer(Modifier.height(28.dp))
+        Spacer(Modifier.height(26.dp))
         Text("開啟通知存取", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, color = NG.ink)
         Spacer(Modifier.height(10.dp))
         Text(
@@ -68,62 +69,81 @@ fun PermissionScreen(
             textAlign = TextAlign.Center,
         )
 
-        Spacer(Modifier.height(26.dp))
+        Spacer(Modifier.height(24.dp))
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(NG.cardShape)
-                .background(NG.card)
+                .background(NG.cardBrush)
                 .border(1.dp, NG.line, NG.cardShape)
                 .padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Step(1, "點下方按鈕開啟系統設定")
-            Step(2, "在清單中找到 MessageRecord")
-            Step(3, "把開關打開並允許")
+            Step(1, GuardIcons.Settings, "點下方按鈕開啟系統設定")
+            Step(2, GuardIcons.Search, "在清單中找到 MessageRecord")
+            Step(3, GuardIcons.CheckMark, "把開關打開並允許")
         }
 
-        Spacer(Modifier.height(26.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(NG.buttonShape)
-                .background(NG.actionBlue)
-                .clickable(onClick = onOpenSettings)
-                .padding(vertical = 15.dp),
-            horizontalArrangement = Arrangement.Center,
-        ) {
-            Text("前往設定開啟", fontSize = 15.5f.sp, fontWeight = FontWeight.Medium, color = Color.White)
-        }
-
-        Spacer(Modifier.height(6.dp))
-        Text(
+        Spacer(Modifier.height(24.dp))
+        GuardButton("前往設定開啟", onOpenSettings, icon = GuardIcons.Settings)
+        Spacer(Modifier.height(8.dp))
+        GuardButton(
             "稍後設定，先查看紀錄",
-            fontSize = 14.5f.sp,
-            color = NG.inkMuted,
-            modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .clickable(onClick = onSkip)
-                .padding(horizontal = 16.dp, vertical = 10.dp),
+            onSkip,
+            icon = GuardIcons.ChevronRight,
+            tone = ButtonTone.Quiet,
         )
     }
 }
 
+/** 主視覺：盾牌加一圈慢慢呼吸的光暈，讓空白的權限頁不那麼死。 */
 @Composable
-private fun Step(index: Int, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun HeroShield() {
+    val pulse = rememberInfiniteTransition(label = "pulse")
+    val scale by pulse.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(tween(2600), RepeatMode.Reverse),
+        label = "pulseScale",
+    )
+    Box(contentAlignment = Alignment.Center) {
         Box(
             modifier = Modifier
-                .size(22.dp)
-                .clip(RoundedCornerShape(11.dp))
+                .size(150.dp)
+                .scale(scale)
+                .clip(CircleShape)
+                .background(
+                    Brush.radialGradient(listOf(Color(0x33187BFF), Color(0x00187BFF))),
+                ),
+        )
+        Box(
+            modifier = Modifier
+                .size(96.dp)
+                .clip(RoundedCornerShape(28.dp))
                 .background(NG.blueSoft)
-                .border(1.dp, NG.blueLight.copy(alpha = 0.4f), RoundedCornerShape(11.dp)),
+                .border(1.dp, NG.blueLight.copy(alpha = 0.42f), RoundedCornerShape(28.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Text("$index", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NG.blueLight)
+            Icon(GuardIcons.Shield, null, tint = NG.blueLight, modifier = Modifier.size(48.dp))
         }
-        Spacer(Modifier.width(12.dp))
-        Text(text, fontSize = 14.sp, color = NG.inkMuted)
     }
 }
 
+@Composable
+private fun Step(index: Int, icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(NG.blueSoft)
+                .border(1.dp, NG.blueLight.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, null, tint = NG.blueLight, modifier = Modifier.size(16.dp))
+        }
+        Spacer(Modifier.width(12.dp))
+        Text(text, fontSize = 14.sp, color = NG.inkMuted, modifier = Modifier.weight(1f))
+        Text("$index", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NG.inkFaint)
+    }
+}

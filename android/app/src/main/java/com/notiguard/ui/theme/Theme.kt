@@ -43,8 +43,21 @@ object NG {
     val redLight = Color(0xFFF87171)
     val redSoft = Color(0x21EF4444)
 
+    val greenSoft = Color(0x2422C55E)
+
     val cardBrush = Brush.linearGradient(listOf(Color(0xFF10222E), card, Color(0xFF091720)))
     val actionBrush = Brush.verticalGradient(listOf(Color(0xFF2586FF), actionBlue))
+
+    /** 畫面底：頂端帶一點藍霧，往下收回純黑藍。 */
+    val screenBrush = Brush.verticalGradient(
+        0f to Color(0xFF0B1C2A), 0.32f to Color(0xFF071420), 1f to base,
+    )
+
+    /** 次要按鈕的填色，比卡片再亮一階，按下去看得出來。 */
+    val tonalBrush = Brush.verticalGradient(listOf(Color(0xFF19303E), Color(0xFF122430)))
+
+    /** 破壞性動作：紅得夠淡，不會蓋過主按鈕。 */
+    val dangerBrush = Brush.verticalGradient(listOf(Color(0x2BEF4444), Color(0x14EF4444)))
 
     // 形狀
     val cardShape = RoundedCornerShape(16.dp)
@@ -52,6 +65,7 @@ object NG {
     val buttonShape = RoundedCornerShape(14.dp)
     val iconShape = RoundedCornerShape(11.dp)
     val iconShapeSmall = RoundedCornerShape(10.dp)
+    val chipShape = RoundedCornerShape(12.dp)
 
     // 字級
     val brand = TextStyle(fontSize = 21.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.2).sp)

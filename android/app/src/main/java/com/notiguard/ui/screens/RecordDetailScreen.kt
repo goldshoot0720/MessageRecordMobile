@@ -20,13 +20,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,7 +45,11 @@ import com.notiguard.data.NotificationRecord
 import com.notiguard.data.RecordSource
 import com.notiguard.ui.Fmt
 import com.notiguard.ui.components.AppGlyph
+import com.notiguard.ui.components.ButtonTone
+import com.notiguard.ui.components.GuardButton
+import com.notiguard.ui.components.IconAction
 import com.notiguard.ui.components.StatusPill
+import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.theme.NG
 import com.notiguard.ui.components.GuardIcons
 
@@ -69,15 +66,28 @@ fun RecordDetailScreen(
     var confirmRemoval by remember { mutableStateOf(false) }
     if (confirmRemoval && record != null) {
         AlertDialog(onDismissRequest = { confirmRemoval = false },
-            title = { Text("移除 ${record.appLabel} 的紀錄？") },
-            text = { Text("將刪除此應用程式的全部通知紀錄及攔截規則。此動作無法復原。") },
+            containerColor = NG.card,
+            shape = NG.cardShape,
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(NG.iconShapeSmall)
+                        .background(NG.redSoft),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(GuardIcons.Trash, null, tint = NG.redLight, modifier = Modifier.size(20.dp))
+                }
+            },
+            title = { Text("移除 ${record.appLabel} 的紀錄？", style = NG.sectionTitle, color = NG.ink) },
+            text = { Text("將刪除此應用程式的全部通知紀錄及攔截規則。此動作無法復原。", style = NG.body, color = NG.inkMuted) },
             confirmButton = { TextButton(onClick = { confirmRemoval = false; onForgetApp() }) { Text("移除", color = NG.redLight) } },
-            dismissButton = { TextButton(onClick = { confirmRemoval = false }) { Text("取消") } })
+            dismissButton = { TextButton(onClick = { confirmRemoval = false }) { Text("取消", color = NG.inkMuted) } })
     }
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(NG.base)
+            .screenBackground()
             .navigationBarsPadding(),
     ) {
         Row(
@@ -87,16 +97,7 @@ fun RecordDetailScreen(
                 .padding(horizontal = 18.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                GuardIcons.Back,
-                contentDescription = "返回",
-                tint = NG.ink,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(9.dp))
-                    .clickable(onClick = onBack)
-                    .padding(14.dp)
-                    .size(20.dp),
-            )
+            IconAction(GuardIcons.Back, "返回", onBack, tint = NG.ink)
             Text(
                 if (record?.blocked == true) "攔截詳情" else "通知詳情",
                 style = NG.navTitle,
@@ -169,13 +170,18 @@ fun RecordDetailScreen(
 
                 MetaRow(GuardIcons.Bell, "來源應用程式", record.appLabel)
                 MetaRow(GuardIcons.Clock, "通知時間", Fmt.timestamp(record.postedAt))
-                MetaRow(GuardIcons.Message, "通知類型", record.category ?: "未分類")
-                MetaRow(GuardIcons.Block, "處理動作", if (record.blocked) "攔截" else "允許")
+                MetaRow(GuardIcons.Tag, "通知類型", record.category ?: "未分類")
+                MetaRow(
+                    if (record.blocked) GuardIcons.Block else GuardIcons.CheckMark,
+                    "處理動作",
+                    if (record.blocked) "攔截" else "允許",
+                    tint = if (record.blocked) NG.redLight else NG.blueLight,
+                )
                 if (record.removedAt != null) {
-                    MetaRow(GuardIcons.Check, "來源撤回時間", Fmt.timestamp(record.removedAt))
+                    MetaRow(GuardIcons.Refresh, "來源撤回時間", Fmt.timestamp(record.removedAt))
                 }
                 MetaRow(
-                    GuardIcons.Bell,
+                    GuardIcons.Info,
                     "紀錄來源",
                     when (record.source) {
                         RecordSource.ANDROID_LISTENER -> "本機通知監聽"
@@ -192,22 +198,19 @@ fun RecordDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (blocking) {
-                    PrimaryButton("允許此應用程式通知", onClick = onAllowApp)
-                    DangerButton("繼續攔截", onClick = onBlockApp)
+                    GuardButton("允許此應用程式通知", onAllowApp, icon = GuardIcons.CheckMark)
+                    GuardButton("繼續攔截", onBlockApp, icon = GuardIcons.Block, tone = ButtonTone.Danger)
                 } else {
-                    PrimaryButton("已允許此應用程式通知", onClick = onAllowApp)
-                    DangerButton("改為攔截此應用程式", onClick = onBlockApp)
+                    GuardButton("已允許此應用程式通知", onAllowApp, icon = GuardIcons.CheckMark)
+                    GuardButton("改為攔截此應用程式", onBlockApp, icon = GuardIcons.Block, tone = ButtonTone.Danger)
                 }
-                Text(
+                GuardButton(
                     "從此應用程式移除",
-                    fontSize = 14.5f.sp,
-                    color = NG.redLight,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { confirmRemoval = true }
-                        .padding(vertical = 16.dp),
+                    { confirmRemoval = true },
+                    icon = GuardIcons.Trash,
+                    tone = ButtonTone.Quiet,
+                    contentColor = NG.redLight,
+                    modifier = Modifier.padding(top = 2.dp),
                 )
             }
 
@@ -223,7 +226,7 @@ fun RecordDetailScreen(
 }
 
 @Composable
-private fun MetaRow(icon: ImageVector, label: String, value: String) {
+private fun MetaRow(icon: ImageVector, label: String, value: String, tint: Color = NG.inkFaint) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -234,50 +237,22 @@ private fun MetaRow(icon: ImageVector, label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 13.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = NG.inkFaint, modifier = Modifier.size(19.dp))
-        Spacer(Modifier.width(13.dp))
+        Box(
+            modifier = Modifier
+                .size(30.dp)
+                .clip(RoundedCornerShape(9.dp))
+                .background(tint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, null, tint = tint, modifier = Modifier.size(17.dp))
+        }
+        Spacer(Modifier.width(12.dp))
         Column {
             Text(label, style = NG.caption, color = NG.inkFaint)
             Text(value, fontSize = 15.sp, color = NG.ink)
         }
-    }
-}
-
-@Composable
-private fun PrimaryButton(label: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(NG.buttonShape)
-            .background(NG.actionBrush)
-            .border(1.dp, NG.blueLight.copy(alpha = 0.5f), NG.buttonShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 18.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(GuardIcons.Check, null, tint = Color.White, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(9.dp))
-        Text(label, fontSize = 15.5f.sp, fontWeight = FontWeight.Medium, color = Color.White)
-    }
-}
-
-@Composable
-private fun DangerButton(label: String, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(NG.buttonShape)
-            .border(1.5.dp, NG.redLight, NG.buttonShape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 18.dp),
-        horizontalArrangement = Arrangement.Center,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(GuardIcons.Block, null, tint = NG.redLight, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.width(9.dp))
-        Text(label, fontSize = 15.5f.sp, fontWeight = FontWeight.Medium, color = NG.redLight)
     }
 }
