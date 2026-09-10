@@ -94,10 +94,35 @@ interface NotiGuardDao {
     @Query("SELECT COUNT(*) FROM records WHERE packageName = :packageName")
     fun observeCount(packageName: String): Flow<Int>
 
+    /** Literal substring search: %, _ and quotes are ordinary text, not SQL patterns. */
+    @Query("""
+        SELECT * FROM records
+        WHERE (:packageName IS NULL OR packageName = :packageName)
+          AND (:blocked IS NULL OR blocked = :blocked)
+          AND (instr(lower(appLabel), lower(:query)) > 0
+            OR instr(lower(packageName), lower(:query)) > 0
+            OR instr(lower(title), lower(:query)) > 0
+            OR instr(lower(text), lower(:query)) > 0)
+        ORDER BY postedAt DESC, id DESC
+    """)
+    fun searchRecords(query: String, packageName: String?, blocked: Boolean?): Flow<List<NotificationRecord>>
+
     // ---------- 詳情 ----------
 
     @Query("SELECT * FROM records WHERE id = :id")
     fun observeRecord(id: Long): Flow<NotificationRecord?>
+
+    // ---------- 匯出 ----------
+
+    /** 匯出用的一次性讀取。傳 null 代表匯出全部 App。 */
+    @Query(
+        """
+        SELECT * FROM records
+        WHERE (:packageName IS NULL OR packageName = :packageName)
+        ORDER BY postedAt DESC
+        """
+    )
+    suspend fun recordsForExport(packageName: String?): List<NotificationRecord>
 
     // ---------- 維護 ----------
 

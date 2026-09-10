@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -62,8 +63,10 @@ fun AppDetailScreen(
     icon: ImageBitmap?,
     onBack: () -> Unit,
     onSetFilter: (RecordFilter) -> Unit,
+    onOpenSearch: () -> Unit,
     onSetBlocking: (Boolean) -> Unit,
     onOpenRecord: (NotificationRecord) -> Unit,
+    onExport: () -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
     Column(
@@ -99,6 +102,9 @@ fun AppDetailScreen(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
+            IconButton(onClick = onOpenSearch) {
+                Icon(Icons.Filled.Search, "搜尋此應用程式通知", tint = NG.inkMuted)
+            }
             Box {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(Icons.Filled.MoreVert, "更多選項", tint = NG.inkMuted)
@@ -108,6 +114,8 @@ fun AppDetailScreen(
                         onClick = { onSetBlocking(!state.blocking); menuOpen = false })
                     DropdownMenuItem(text = { Text("顯示全部紀錄") },
                         onClick = { onSetFilter(RecordFilter.ALL); menuOpen = false })
+                    DropdownMenuItem(text = { Text("匯出紀錄（JSON）") },
+                        onClick = { onExport(); menuOpen = false })
                 }
             }
         }

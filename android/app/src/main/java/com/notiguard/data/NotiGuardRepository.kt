@@ -54,6 +54,14 @@ class NotiGuardRepository(
 
     fun recordCount(packageName: String): Flow<Int> = dao.observeCount(packageName)
 
+    fun searchRecords(query: String, packageName: String?, filter: RecordFilter): Flow<List<NotificationRecord>> =
+        if (query.isBlank()) kotlinx.coroutines.flow.flowOf(emptyList())
+        else dao.searchRecords(query.trim(), packageName, when (filter) {
+            RecordFilter.ALL -> null
+            RecordFilter.BLOCKED -> true
+            RecordFilter.ALLOWED -> false
+        })
+
     fun rule(packageName: String): Flow<AppRule?> = dao.observeRule(packageName)
 
     fun record(id: Long): Flow<NotificationRecord?> = dao.observeRecord(id)
@@ -83,6 +91,17 @@ class NotiGuardRepository(
     suspend fun markRemoved(uid: String, at: Long = System.currentTimeMillis()) {
         dao.markRemoved(uid, at)
     }
+
+    // ---------- 匯出 ----------
+
+    /** 匯出成跨平台 JSON，供 iOS 版經「從檔案匯入」讀進去。 */
+    suspend fun exportJson(packageName: String? = null): String =
+        RecordExporter.toJson(dao.recordsForExport(packageName), deviceId())
+
+    /** 穩定的裝置識別，只用來在多機同步時分辨紀錄來源。 */
+    private fun deviceId(): String = "android-" +
+        android.os.Build.MANUFACTURER.lowercase().replace(" ", "-") + "-" +
+        android.os.Build.MODEL.lowercase().replace(" ", "-")
 
     private fun startOfToday(): Long = Calendar.getInstance().apply {
         set(Calendar.HOUR_OF_DAY, 0)

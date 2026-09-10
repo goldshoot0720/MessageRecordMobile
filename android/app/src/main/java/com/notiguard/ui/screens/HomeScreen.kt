@@ -67,14 +67,13 @@ fun HomeScreen(
     state: HomeUiState,
     iconFor: (String) -> ImageBitmap?,
     onToggleMaster: (Boolean) -> Unit,
+    onOpenSearch: () -> Unit,
     onOpenApp: (AppSummary) -> Unit,
     onOpenSettings: () -> Unit,
 ) {
     var selectedPackage by rememberSaveable { mutableStateOf<String?>(null) }
-    var query by rememberSaveable { mutableStateOf("") }
-    var searching by rememberSaveable { mutableStateOf(false) }
     var showStats by rememberSaveable { mutableStateOf(false) }
-    val visibleApps = state.apps.filter { it.appLabel.contains(query.trim(), true) || it.packageName.contains(query.trim(), true) }
+    val visibleApps = state.apps
     if (showStats) {
         AlertDialog(onDismissRequest = { showStats = false }, title = { Text("通知統計") },
             text = { Column {
@@ -190,22 +189,17 @@ fun HomeScreen(
         ) {
             Text("應用程式", style = NG.sectionTitle, color = NG.ink)
             Spacer(Modifier.weight(1f))
-            IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
-                Icon(if (searching) Icons.Filled.Close else Icons.Filled.Search,
-                    if (searching) "關閉搜尋" else "搜尋應用程式", tint = NG.inkMuted)
+            TextButton(onClick = onOpenSearch) {
+                Icon(Icons.Filled.Search, null, tint = NG.inkMuted)
+                Text("搜尋通知", color = NG.inkMuted, modifier = Modifier.padding(start = 6.dp))
             }
-        }
-        if (searching) {
-            OutlinedTextField(query, { query = it }, singleLine = true,
-                label = { Text("搜尋應用程式") }, shape = NG.buttonShape,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp))
         }
 
         // ---- App 清單 ----
         Box(Modifier.weight(1f)) {
             if (visibleApps.isEmpty()) {
                 Text(
-                    if (query.isNotBlank()) "找不到符合「$query」的應用程式" else "還沒有任何紀錄。\n授權通知存取後，新進的通知會即時出現在這裡。",
+                    "還沒有任何紀錄。\n授權通知存取後，新進的通知會即時出現在這裡。",
                     style = NG.body,
                     color = NG.inkFaint,
                     modifier = Modifier.align(Alignment.Center).padding(40.dp),
@@ -226,7 +220,7 @@ fun HomeScreen(
                         Box(Modifier.fillMaxWidth().height(1.dp).background(NG.lineSoft))
                     }
                     item {
-                        EndNote(if (query.isBlank()) "已顯示全部 ${state.stats.appCount} 個應用程式" else "找到 ${visibleApps.size} 個應用程式")
+                        EndNote("已顯示全部 ${state.stats.appCount} 個應用程式")
                     }
                 }
             }

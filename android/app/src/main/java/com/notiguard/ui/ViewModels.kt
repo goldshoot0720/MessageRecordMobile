@@ -1,6 +1,7 @@
 package com.notiguard.ui
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.notiguard.data.AppRule
@@ -8,6 +9,7 @@ import com.notiguard.data.AppSummary
 import com.notiguard.data.GuardStats
 import com.notiguard.data.NotiGuardRepository
 import com.notiguard.data.NotificationRecord
+import com.notiguard.data.RecordExporter
 import com.notiguard.data.RecordFilter
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -94,6 +96,14 @@ class AppDetailViewModel(
     fun setBlocking(blocking: Boolean) {
         viewModelScope.launch { repo.setBlocking(packageName, appLabel, blocking) }
     }
+
+    /** 產生這支 App 的匯出 JSON，交給呼叫端選擇儲存位置。 */
+    fun buildExport(onReady: (fileName: String, json: String) -> Unit) {
+        viewModelScope.launch {
+            val json = repo.exportJson(packageName)
+            onReady(RecordExporter.fileName(appLabel), json)
+        }
+    }
 }
 
 // ---------------------------------------------------------------- 通知詳情
@@ -149,6 +159,12 @@ class NotiGuardViewModelFactory(
     private val appLabel: String = "",
     private val recordId: Long = 0,
 ) : ViewModelProvider.Factory {
+
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>, extras: androidx.lifecycle.viewmodel.CreationExtras): T =
+        if (modelClass == SearchViewModel::class.java)
+            SearchViewModel(repo, packageName, extras.createSavedStateHandle()) as T
+        else create(modelClass)
 
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T = when {
