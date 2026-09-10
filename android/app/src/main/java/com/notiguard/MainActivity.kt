@@ -49,10 +49,10 @@ class MainActivity : ComponentActivity() {
 private object Route {
     const val PERMISSION = "permission"
     const val HOME = "home"
-    const val APP_DETAIL = "app/{pkg}/{label}"
+    const val APP_DETAIL = "app/{pkg}/{label}?query={query}"
     const val RECORD_DETAIL = "record/{id}"
 
-    fun appDetail(pkg: String, label: String) = "app/${Uri.encode(pkg)}/${Uri.encode(label)}"
+    fun appDetail(pkg: String, label: String, query: String) = "app/${Uri.encode(pkg)}/${Uri.encode(label)}?query=${Uri.encode(query)}"
     fun recordDetail(id: Long) = "record/$id"
 }
 
@@ -88,7 +88,8 @@ private fun NotiGuardNavHost() {
                 state = state,
                 iconFor = { pkg -> identity.icon(pkg) },
                 onToggleMaster = vm::setMaster,
-                onOpenApp = { nav.navigate(Route.appDetail(it.packageName, it.appLabel)) },
+                onOpenApp = { selected, query -> nav.navigate(Route.appDetail(selected.packageName, selected.appLabel, query)) },
+                onQueryChange = vm::setQuery,
                 onOpenSettings = { context.startActivity(ListenerAccess.settingsIntent(context)) },
             )
         }
@@ -98,12 +99,14 @@ private fun NotiGuardNavHost() {
             arguments = listOf(
                 navArgument("pkg") { type = NavType.StringType },
                 navArgument("label") { type = NavType.StringType },
+                navArgument("query") { type = NavType.StringType; defaultValue = "" },
             ),
         ) { entry ->
             val pkg = entry.arguments?.getString("pkg").orEmpty()
             val label = entry.arguments?.getString("label").orEmpty()
             val vm: AppDetailViewModel = viewModel(
-                factory = NotiGuardViewModelFactory(repo, packageName = pkg, appLabel = label),
+                factory = NotiGuardViewModelFactory(repo, packageName = pkg, appLabel = label,
+                    initialQuery = entry.arguments?.getString("query").orEmpty()),
             )
             val state by vm.state.collectAsStateWithLifecycle()
             AppDetailScreen(
@@ -111,6 +114,7 @@ private fun NotiGuardNavHost() {
                 icon = identity.icon(pkg),
                 onBack = { nav.popBackStack() },
                 onSetFilter = vm::setFilter,
+                onQueryChange = vm::setQuery,
                 onSetBlocking = vm::setBlocking,
                 onOpenRecord = { nav.navigate(Route.recordDetail(it.id)) },
             )

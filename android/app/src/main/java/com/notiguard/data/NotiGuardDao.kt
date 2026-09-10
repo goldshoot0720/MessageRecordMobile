@@ -51,11 +51,18 @@ interface NotiGuardDao {
                ru.blocking              AS blocking
         FROM records r
         LEFT JOIN app_rules ru ON ru.packageName = r.packageName
+        WHERE :query = '' OR r.packageName IN (
+            SELECT packageName FROM records
+            WHERE instr(lower(appLabel), lower(:query)) > 0
+               OR instr(lower(packageName), lower(:query)) > 0
+               OR instr(lower(title), lower(:query)) > 0
+               OR instr(lower(text), lower(:query)) > 0
+        )
         GROUP BY r.packageName
         ORDER BY total DESC, lastPostedAt DESC
         """
     )
-    fun observeAppSummaries(): Flow<List<AppSummary>>
+    fun observeAppSummaries(query: String = ""): Flow<List<AppSummary>>
 
     @Query(
         """
@@ -90,6 +97,21 @@ interface NotiGuardDao {
         """
     )
     fun observeRecords(packageName: String, blocked: Boolean): Flow<List<NotificationRecord>>
+
+    @Query(
+        """
+        SELECT * FROM records
+        WHERE packageName = :packageName
+          AND (:blocked IS NULL OR blocked = :blocked)
+          AND (:query = ''
+               OR instr(lower(appLabel), lower(:query)) > 0
+               OR instr(lower(packageName), lower(:query)) > 0
+               OR instr(lower(title), lower(:query)) > 0
+               OR instr(lower(text), lower(:query)) > 0)
+        ORDER BY postedAt DESC, id DESC
+        """
+    )
+    fun searchRecords(packageName: String, blocked: Boolean?, query: String): Flow<List<NotificationRecord>>
 
     @Query("SELECT COUNT(*) FROM records WHERE packageName = :packageName")
     fun observeCount(packageName: String): Flow<Int>

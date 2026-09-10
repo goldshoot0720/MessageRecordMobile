@@ -21,15 +21,17 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.imePadding
+import com.notiguard.ui.components.RecordSearchField
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -62,15 +64,18 @@ fun AppDetailScreen(
     icon: ImageBitmap?,
     onBack: () -> Unit,
     onSetFilter: (RecordFilter) -> Unit,
+    onQueryChange: (String) -> Unit,
     onSetBlocking: (Boolean) -> Unit,
     onOpenRecord: (NotificationRecord) -> Unit,
 ) {
     var menuOpen by remember { mutableStateOf(false) }
+    var query by rememberSaveable(state.packageName) { mutableStateOf(state.query) }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(NG.base)
-            .navigationBarsPadding(),
+            .navigationBarsPadding()
+            .imePadding(),
     ) {
         // ---- 導覽列 ----
         Row(
@@ -107,7 +112,7 @@ fun AppDetailScreen(
                     DropdownMenuItem(text = { Text(if (state.blocking) "允許此應用程式通知" else "攔截此應用程式通知") },
                         onClick = { onSetBlocking(!state.blocking); menuOpen = false })
                     DropdownMenuItem(text = { Text("顯示全部紀錄") },
-                        onClick = { onSetFilter(RecordFilter.ALL); menuOpen = false })
+                        onClick = { query = ""; onQueryChange(""); onSetFilter(RecordFilter.ALL); menuOpen = false })
                 }
             }
         }
@@ -141,6 +146,12 @@ fun AppDetailScreen(
             )
         }
 
+        RecordSearchField(query, { value ->
+            query = value.trim()
+            onQueryChange(value)
+        }, label = "搜尋通知標題或內文",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp))
+
         // ---- 三段切換 ----
         SegmentedTabs(
             options = listOf(
@@ -155,9 +166,9 @@ fun AppDetailScreen(
 
         // ---- 紀錄清單，依日期分組 ----
         if (state.records.isEmpty()) {
-            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    when (state.filter) {
+                    if (query.isNotBlank()) "目前篩選下沒有符合的通知。\n試試其他關鍵字、清除搜尋或切換分頁。" else when (state.filter) {
                         RecordFilter.BLOCKED -> "這支應用程式目前沒有被攔截的通知。\n切回「全部」看看完整紀錄。"
                         RecordFilter.ALLOWED -> "這支應用程式目前沒有被放行的通知。\n切回「全部」看看完整紀錄。"
                         RecordFilter.ALL -> "還沒有這支應用程式的紀錄。"
@@ -209,7 +220,7 @@ fun AppDetailScreen(
                         HorizontalDivider(color = NG.lineSoft)
                     }
                 }
-                item { EndNote("已顯示 ${state.records.size} 則通知") }
+                item { EndNote(if (query.isBlank()) "已顯示 ${state.records.size} 則通知" else "找到 ${state.records.size} 則符合的通知") }
             }
         }
     }

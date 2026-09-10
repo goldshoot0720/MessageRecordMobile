@@ -27,22 +27,29 @@ data class HomeUiState(
     val stats: GuardStats = GuardStats(0, 0, 0),
     val blockedToday: Int = 0,
     val apps: List<AppSummary> = emptyList(),
+    val query: String = "",
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(private val repo: NotiGuardRepository) : ViewModel() {
+
+    private val query = MutableStateFlow("")
+    private val apps = query.flatMapLatest { value -> repo.searchApps(value).map { value to it } }
 
     val state: StateFlow<HomeUiState> = combine(
         repo.masterEnabled,
         repo.stats,
         repo.blockedToday,
-        repo.appSummaries,
-    ) { master, stats, today, apps ->
-        HomeUiState(master, stats, today, apps)
+        apps,
+    ) { master, stats, today, result ->
+        HomeUiState(master, stats, today, result.second, result.first)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     fun setMaster(enabled: Boolean) {
         viewModelScope.launch { repo.setMasterEnabled(enabled) }
     }
+
+    fun setQuery(value: String) { query.value = value.trim() }
 }
 
 // ---------------------------------------------------------------- 應用程式頁
@@ -54,6 +61,7 @@ data class AppDetailUiState(
     val blocking: Boolean = true,
     val filter: RecordFilter = RecordFilter.ALL,
     val records: List<NotificationRecord> = emptyList(),
+    val query: String = "",
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -61,35 +69,41 @@ class AppDetailViewModel(
     private val repo: NotiGuardRepository,
     private val packageName: String,
     private val appLabel: String,
+    initialQuery: String = "",
 ) : ViewModel() {
 
     private val filter = MutableStateFlow(RecordFilter.ALL)
+    private val query = MutableStateFlow(initialQuery)
 
-    private val records = filter.flatMapLatest { repo.records(packageName, it) }
+    private val records = combine(filter, query) { f, q -> f to q }.flatMapLatest { (f, q) ->
+        repo.searchRecords(packageName, f, q).map { Triple(f, q, it) }
+    }
 
     val state: StateFlow<AppDetailUiState> = combine(
         repo.recordCount(packageName),
         repo.rule(packageName),
-        filter,
         records,
-    ) { total, rule: AppRule?, currentFilter, list ->
+    ) { total, rule: AppRule?, result ->
         AppDetailUiState(
             packageName = packageName,
             appLabel = appLabel,
             total = total,
             blocking = rule?.blocking ?: true,
-            filter = currentFilter,
-            records = list,
+            filter = result.first,
+            records = result.third,
+            query = result.second,
         )
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
-        AppDetailUiState(packageName = packageName, appLabel = appLabel),
+        AppDetailUiState(packageName = packageName, appLabel = appLabel, query = initialQuery),
     )
 
     fun setFilter(value: RecordFilter) {
         filter.value = value
     }
+
+    fun setQuery(value: String) { query.value = value.trim() }
 
     fun setBlocking(blocking: Boolean) {
         viewModelScope.launch { repo.setBlocking(packageName, appLabel, blocking) }
@@ -148,6 +162,7 @@ class NotiGuardViewModelFactory(
     private val packageName: String = "",
     private val appLabel: String = "",
     private val recordId: Long = 0,
+    private val initialQuery: String = "",
 ) : ViewModelProvider.Factory {
 
     @Suppress("UNCHECKED_CAST")
@@ -156,7 +171,7 @@ class NotiGuardViewModelFactory(
             HomeViewModel(repo) as T
 
         modelClass.isAssignableFrom(AppDetailViewModel::class.java) ->
-            AppDetailViewModel(repo, packageName, appLabel) as T
+            AppDetailViewModel(repo, packageName, appLabel, initialQuery) as T
 
         modelClass.isAssignableFrom(RecordDetailViewModel::class.java) ->
             RecordDetailViewModel(repo, recordId) as T

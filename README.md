@@ -4,7 +4,7 @@ Android 通知攔截與紀錄 App，使用 Kotlin、Jetpack Compose、Room 與 D
 
 ## 下載
 
-[Releases](https://github.com/goldshoot0720/MessageRecordMobile/releases) 提供 APK 與 SHA-256 校驗碼。目前版本為 **1.0.2-preview.1**，Android 8.0 以上可用，套件 ID 為 `com.notiguard.debug`，可覆蓋先前預覽版。
+[Releases](https://github.com/goldshoot0720/MessageRecordMobile/releases) 提供 APK 與 SHA-256 校驗碼。目前版本為 **1.0.3-preview.1**，Android 8.0 以上可用，套件 ID 為 `com.notiguard.debug`，可覆蓋先前預覽版。
 
 ## 通知紀錄
 
@@ -14,6 +14,7 @@ Android 通知攔截與紀錄 App，使用 Kotlin、Jetpack Compose、Room 與 D
 - 不同通知識別碼、不同訊息時間或內容仍會分別保存。來源未提供訊息時間時退回系統發送時間，避免誤合併新訊息。
 - 舊版重複紀錄保留，因為缺少原始摘要旗標與訊息時間，無法安全自動清理。
 - Room 1 → 2 遷移只刪除舊版示範資料，保留真實紀錄與規則。
+- 首頁可搜尋 App 名稱、套件名稱、通知標題與內文；點入 App 後會保留關鍵字，並可與「已攔截／已允許」篩選一起使用。
 
 ## 建置與驗證
 

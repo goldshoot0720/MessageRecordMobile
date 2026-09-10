@@ -38,6 +38,8 @@ class NotiGuardRepository(
 
     val appSummaries: Flow<List<AppSummary>> = dao.observeAppSummaries()
 
+    fun searchApps(query: String): Flow<List<AppSummary>> = dao.observeAppSummaries(query.trim())
+
     val stats: Flow<GuardStats> = dao.observeStats()
 
     /** 今日已攔截則數。每次收集時以當下的當地零點計算。 */
@@ -51,6 +53,13 @@ class NotiGuardRepository(
             RecordFilter.BLOCKED -> dao.observeRecords(packageName, blocked = true)
             RecordFilter.ALLOWED -> dao.observeRecords(packageName, blocked = false)
         }
+
+    fun searchRecords(packageName: String, filter: RecordFilter, query: String): Flow<List<NotificationRecord>> =
+        dao.searchRecords(packageName, when (filter) {
+            RecordFilter.ALL -> null
+            RecordFilter.BLOCKED -> true
+            RecordFilter.ALLOWED -> false
+        }, query.trim())
 
     fun recordCount(packageName: String): Flow<Int> = dao.observeCount(packageName)
 
