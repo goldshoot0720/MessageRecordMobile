@@ -6,13 +6,12 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.material3.Icon
+import androidx.annotation.DrawableRes
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -173,8 +172,7 @@ fun AppGlyph(
                 drawLine(Color(0xFFEA4335), Offset(w * 0.50f, h * 0.56f), Offset(w * 0.92f, h * 0.25f), stroke)
             }
         } else if (packageName == "com.android.systemui") {
-            Icon(GuardIcons.Settings, null, tint = Color.White,
-                modifier = Modifier.size((size * 0.72f).dp))
+            GuardIcon(GuardIcons.Settings, null, modifier = Modifier.size((size * 0.72f).dp))
         } else {
         Text(
             text = Brand.short(packageName, appLabel),
@@ -209,9 +207,8 @@ fun Modifier.screenBackground(): Modifier = this
 /** 藍底圓角方塊包一顆圖示，品牌列與卡片開頭都用它。 */
 @Composable
 fun GlyphBadge(
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     size: Int = 34,
-    tint: Color = NG.blueLight,
     background: Color = NG.blueSoft,
     border: Color = NG.blueLight.copy(alpha = 0.4f),
 ) {
@@ -223,18 +220,17 @@ fun GlyphBadge(
             .border(1.dp, border, NG.iconShapeSmall),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size((size * 0.56f).dp))
+        GuardIcon(icon, null, modifier = Modifier.size((size * 0.56f).dp))
     }
 }
 
 /** 導覽列上的圖示按鈕：48dp 觸控區、圓角底、按下去有回饋。 */
 @Composable
 fun IconAction(
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     contentDescription: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = NG.inkMuted,
     filled: Boolean = false,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -255,7 +251,7 @@ fun IconAction(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription, tint = tint, modifier = Modifier.size(20.dp))
+        GuardIcon(icon, contentDescription, modifier = Modifier.size(20.dp))
     }
 }
 
@@ -271,8 +267,8 @@ fun GuardButton(
     label: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null,
-    trailingIcon: ImageVector? = null,
+    @DrawableRes icon: Int? = null,
+    @DrawableRes trailingIcon: Int? = null,
     tone: ButtonTone = ButtonTone.Primary,
     fillWidth: Boolean = true,
     contentColor: Color? = null,
@@ -317,13 +313,13 @@ fun GuardButton(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = content, modifier = Modifier.size(19.dp))
+            GuardIcon(icon, null, modifier = Modifier.size(19.dp))
             Spacer(Modifier.width(9.dp))
         }
         Text(label, fontSize = 15.5f.sp, fontWeight = FontWeight.Medium, color = content)
         if (trailingIcon != null) {
             Spacer(Modifier.width(9.dp))
-            Icon(trailingIcon, null, tint = content, modifier = Modifier.size(19.dp))
+            GuardIcon(trailingIcon, null, modifier = Modifier.size(19.dp))
         }
     }
 }
@@ -332,7 +328,7 @@ fun GuardButton(
 @Composable
 fun ChipButton(
     label: String,
-    icon: ImageVector,
+    @DrawableRes icon: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     tint: Color = NG.blueLight,
@@ -355,7 +351,7 @@ fun ChipButton(
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp))
+        GuardIcon(icon, null, modifier = Modifier.size(15.dp))
         Spacer(Modifier.width(6.dp))
         Text(label, fontSize = 13.sp, color = NG.inkMuted)
     }
@@ -390,7 +386,7 @@ fun StatTile(
     value: String,
     label: String,
     valueColor: Color = NG.ink,
-    icon: ImageVector? = null,
+    @DrawableRes icon: Int? = null,
 ) {
     Column(
         modifier = modifier
@@ -408,7 +404,7 @@ fun StatTile(
                     .background(valueColor.copy(alpha = 0.13f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, null, tint = valueColor, modifier = Modifier.size(15.dp))
+                GuardIcon(icon, null, modifier = Modifier.size(15.dp))
             }
             Spacer(Modifier.height(7.dp))
         }
@@ -489,7 +485,7 @@ fun <T> SegmentedTabs(
     selected: T,
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
-    iconFor: (T) -> ImageVector? = { null },
+    iconFor: (T) -> Int? = { null },
 ) {
     Row(
         modifier = modifier
@@ -523,7 +519,7 @@ fun <T> SegmentedTabs(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (icon != null) {
-                    Icon(icon, null, tint = content, modifier = Modifier.size(15.dp))
+                    GuardIcon(icon, null, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(6.dp))
                 }
                 Text(

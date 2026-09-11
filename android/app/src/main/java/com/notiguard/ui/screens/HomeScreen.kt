@@ -1,4 +1,4 @@
-package com.notiguard.ui.screens
+﻿package com.notiguard.ui.screens
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
@@ -22,7 +22,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -38,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -55,6 +53,7 @@ import com.notiguard.ui.components.SectionHeader
 import com.notiguard.ui.components.StatTile
 import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.theme.NG
+import com.notiguard.ui.components.GuardIcon
 import com.notiguard.ui.components.GuardIcons
 
 @Composable
@@ -172,10 +171,7 @@ private fun MasterCard(enabled: Boolean, blockedToday: Int, onToggle: (Boolean) 
             .padding(horizontal = 16.dp, vertical = 15.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        GlyphBadge(
-            icon = if (enabled) GuardIcons.Shield else GuardIcons.BellOff,
-            size = 36,
-            tint = accent,
+        GlyphBadge(icon = if (enabled) GuardIcons.Shield else GuardIcons.BellOff, size = 36,
             background = if (enabled) NG.blueSoft else NG.cardMuted,
             border = accent.copy(alpha = 0.35f),
         )
@@ -217,7 +213,7 @@ private fun EmptyApps(modifier: Modifier = Modifier) {
                 .border(1.dp, NG.lineSoft, RoundedCornerShape(22.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(GuardIcons.Bell, null, tint = NG.inkFaint, modifier = Modifier.size(32.dp))
+            GuardIcon(GuardIcons.Bell, null, modifier = Modifier.size(32.dp))
         }
         Spacer(Modifier.height(16.dp))
         Text("還沒有任何紀錄", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = NG.inkMuted)
@@ -283,11 +279,7 @@ private fun AppRow(
                 .background(NG.cardMuted)
                 .padding(horizontal = 10.dp, vertical = 3.dp),
         )
-        Icon(
-            GuardIcons.ChevronRight,
-            contentDescription = null,
-            tint = NG.inkFaint,
-            modifier = Modifier.padding(start = 10.dp).size(16.dp),
+        GuardIcon(GuardIcons.ChevronRight, null, modifier = Modifier.padding(start = 10.dp).size(16.dp),
         )
     }
 }
@@ -317,7 +309,7 @@ private fun StatsDialog(state: HomeUiState, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun StatLine(icon: ImageVector, label: String, value: String, accent: Color) {
+private fun StatLine(icon: Int, label: String, value: String, accent: Color) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -326,7 +318,7 @@ private fun StatLine(icon: ImageVector, label: String, value: String, accent: Co
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
+        GuardIcon(icon, null, modifier = Modifier.size(17.dp))
         Spacer(Modifier.width(10.dp))
         Text(label, fontSize = 14.sp, color = NG.inkMuted, modifier = Modifier.weight(1f))
         Text(value, style = NG.statValue, color = accent, fontSize = 17.sp)
@@ -353,7 +345,7 @@ private fun BottomTabs(onStats: () -> Unit, onSettings: () -> Unit) {
 }
 
 @Composable
-private fun Tab(label: String, icon: ImageVector, active: Boolean, onClick: () -> Unit) {
+private fun Tab(label: String, icon: Int, active: Boolean, onClick: () -> Unit) {
     val tint by animateColorAsState(if (active) NG.blueLight else NG.inkFaint, label = "tabTint")
     Column(
         modifier = Modifier
@@ -369,7 +361,7 @@ private fun Tab(label: String, icon: ImageVector, active: Boolean, onClick: () -
                 .padding(horizontal = 14.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = tint, modifier = Modifier.size(20.dp))
+            GuardIcon(icon, null, modifier = Modifier.size(20.dp))
         }
         Spacer(Modifier.height(3.dp))
         Text(label, fontSize = 11.sp, color = tint)

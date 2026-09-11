@@ -1,4 +1,4 @@
-package com.notiguard.ui.screens
+﻿package com.notiguard.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,6 +51,7 @@ import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.components.SegmentedTabs
 import com.notiguard.ui.components.StatusPill
 import com.notiguard.ui.theme.NG
+import com.notiguard.ui.components.GuardIcon
 import com.notiguard.ui.components.GuardIcons
 
 @Composable
@@ -80,7 +80,7 @@ fun AppDetailScreen(
                 .padding(horizontal = 18.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconAction(GuardIcons.Back, "返回", onBack, tint = NG.ink)
+            IconAction(GuardIcons.Back, "返回", onBack)
             Text(
                 state.appLabel,
                 style = NG.navTitle,
@@ -101,21 +101,17 @@ fun AppDetailScreen(
                     DropdownMenuItem(
                         text = { Text(if (state.blocking) "允許此應用程式通知" else "攔截此應用程式通知", color = NG.ink) },
                         leadingIcon = {
-                            Icon(
-                                if (state.blocking) GuardIcons.Check else GuardIcons.Block,
-                                null,
-                                tint = if (state.blocking) NG.blueLight else NG.redLight,
-                                modifier = Modifier.size(19.dp),
+                            GuardIcon(if (state.blocking) GuardIcons.Check else GuardIcons.Block, null, modifier = Modifier.size(19.dp),
                             )
                         },
                         onClick = { onSetBlocking(!state.blocking); menuOpen = false })
                     DropdownMenuItem(
                         text = { Text("顯示全部紀錄", color = NG.ink) },
-                        leadingIcon = { Icon(GuardIcons.Filter, null, tint = NG.inkMuted, modifier = Modifier.size(19.dp)) },
+                        leadingIcon = { GuardIcon(GuardIcons.Filter, null, modifier = Modifier.size(19.dp)) },
                         onClick = { onSetFilter(RecordFilter.ALL); menuOpen = false })
                     DropdownMenuItem(
                         text = { Text("匯出紀錄（JSON）", color = NG.ink) },
-                        leadingIcon = { Icon(GuardIcons.Export, null, tint = NG.inkMuted, modifier = Modifier.size(19.dp)) },
+                        leadingIcon = { GuardIcon(GuardIcons.Export, null, modifier = Modifier.size(19.dp)) },
                         onClick = { onExport(); menuOpen = false })
                 }
             }
@@ -138,15 +134,11 @@ fun AppDetailScreen(
                 Text(state.appLabel, style = NG.heroName, color = NG.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(5.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(GuardIcons.Message, null, tint = NG.inkFaint, modifier = Modifier.size(14.dp))
+                    GuardIcon(GuardIcons.Message, null, modifier = Modifier.size(14.dp))
                     Spacer(Modifier.width(5.dp))
                     Text("共 ${state.total} 則", fontSize = 13.sp, color = NG.inkFaint)
                     Spacer(Modifier.width(10.dp))
-                    Icon(
-                        if (state.blocking) GuardIcons.Shield else GuardIcons.CheckMark,
-                        null,
-                        tint = if (state.blocking) NG.redLight else NG.blueLight,
-                        modifier = Modifier.size(14.dp),
+                    GuardIcon(if (state.blocking) GuardIcons.Shield else GuardIcons.CheckMark, null, modifier = Modifier.size(14.dp),
                     )
                     Spacer(Modifier.width(5.dp))
                     Text(

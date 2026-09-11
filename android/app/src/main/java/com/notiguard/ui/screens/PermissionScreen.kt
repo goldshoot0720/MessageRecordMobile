@@ -1,4 +1,4 @@
-package com.notiguard.ui.screens
+﻿package com.notiguard.ui.screens
 
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.notiguard.ui.components.ButtonTone
 import com.notiguard.ui.components.GuardButton
+import com.notiguard.ui.components.GuardIcon
 import com.notiguard.ui.components.GuardIcons
 import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.theme.NG
@@ -124,13 +124,13 @@ private fun HeroShield() {
                 .border(1.dp, NG.blueLight.copy(alpha = 0.42f), RoundedCornerShape(28.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(GuardIcons.Shield, null, tint = NG.blueLight, modifier = Modifier.size(48.dp))
+            GuardIcon(GuardIcons.Shield, null, modifier = Modifier.size(48.dp))
         }
     }
 }
 
 @Composable
-private fun Step(index: Int, icon: androidx.compose.ui.graphics.vector.ImageVector, text: String) {
+private fun Step(index: Int, icon: Int, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -140,7 +140,7 @@ private fun Step(index: Int, icon: androidx.compose.ui.graphics.vector.ImageVect
                 .border(1.dp, NG.blueLight.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = NG.blueLight, modifier = Modifier.size(16.dp))
+            GuardIcon(icon, null, modifier = Modifier.size(16.dp))
         }
         Spacer(Modifier.width(12.dp))
         Text(text, fontSize = 14.sp, color = NG.inkMuted, modifier = Modifier.weight(1f))

@@ -1,4 +1,4 @@
-package com.notiguard.ui.screens
+﻿package com.notiguard.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.sp
 import com.notiguard.ui.components.AppGlyph
 import com.notiguard.ui.components.GuardButton
 import com.notiguard.ui.components.ButtonTone
+import com.notiguard.ui.components.GuardIcon
 import com.notiguard.ui.components.GuardIcons
 import com.notiguard.ui.components.IconAction
 import com.notiguard.ui.components.screenBackground
@@ -64,7 +65,7 @@ fun SearchScreen(
     }
     Column(Modifier.fillMaxSize().screenBackground().safeDrawingPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconAction(GuardIcons.Back, "返回", onBack, tint = NG.ink)
+            IconAction(GuardIcons.Back, "返回", onBack)
             Spacer(Modifier.width(4.dp))
             Text(if (appLabel.isBlank()) "搜尋通知" else "搜尋 $appLabel 通知",
                 style = NG.navTitle, color = NG.ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -73,9 +74,9 @@ fun SearchScreen(
         OutlinedTextField(
             value = query, onValueChange = onQuery, singleLine = true,
             placeholder = { Text(if (appLabel.isBlank()) "App 名稱、標題或內容" else "輸入標題或內容") },
-            leadingIcon = { Icon(GuardIcons.Search, null, tint = NG.blueLight, modifier = Modifier.size(19.dp)) },
+            leadingIcon = { GuardIcon(GuardIcons.Search, null, modifier = Modifier.size(19.dp)) },
             trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) {
-                Icon(GuardIcons.Close, "清除搜尋", tint = NG.inkMuted, modifier = Modifier.size(18.dp))
+                GuardIcon(GuardIcons.Close, "清除搜尋", modifier = Modifier.size(18.dp))
             } },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = NG.blue,
@@ -122,7 +123,7 @@ fun SearchScreen(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(GuardIcons.Check, null, tint = NG.blueLight, modifier = Modifier.size(15.dp))
+                    GuardIcon(GuardIcons.Check, null, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(6.dp))
                     Text("找到 ${results.records.size} 則通知", style = NG.caption, color = NG.inkFaint)
                 }
@@ -165,7 +166,7 @@ fun SearchScreen(
 /** 空／載入／失敗共用的狀態區塊：一顆圖示加一段說明，比純文字好認。 */
 @Composable
 private fun ColumnScope.SearchState(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: Int,
     text: String,
     tint: Color = NG.inkFaint,
 ) {
@@ -181,7 +182,7 @@ private fun ColumnScope.SearchState(
                 .border(1.dp, NG.lineSoft, RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = tint, modifier = Modifier.size(26.dp))
+            GuardIcon(icon, null, modifier = Modifier.size(26.dp))
         }
         Spacer(Modifier.height(14.dp))
         Text(text, style = NG.body, color = NG.inkMuted,

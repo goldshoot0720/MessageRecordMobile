@@ -1,4 +1,4 @@
-package com.notiguard.ui.screens
+﻿package com.notiguard.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -35,7 +34,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -51,6 +49,7 @@ import com.notiguard.ui.components.IconAction
 import com.notiguard.ui.components.StatusPill
 import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.theme.NG
+import com.notiguard.ui.components.GuardIcon
 import com.notiguard.ui.components.GuardIcons
 
 @Composable
@@ -76,7 +75,7 @@ fun RecordDetailScreen(
                         .background(NG.redSoft),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(GuardIcons.Trash, null, tint = NG.redLight, modifier = Modifier.size(20.dp))
+                    GuardIcon(GuardIcons.Trash, null, modifier = Modifier.size(20.dp))
                 }
             },
             title = { Text("移除 ${record.appLabel} 的紀錄？", style = NG.sectionTitle, color = NG.ink) },
@@ -97,7 +96,7 @@ fun RecordDetailScreen(
                 .padding(horizontal = 18.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconAction(GuardIcons.Back, "返回", onBack, tint = NG.ink)
+            IconAction(GuardIcons.Back, "返回", onBack)
             Text(
                 if (record?.blocked == true) "攔截詳情" else "通知詳情",
                 style = NG.navTitle,
@@ -226,7 +225,7 @@ fun RecordDetailScreen(
 }
 
 @Composable
-private fun MetaRow(icon: ImageVector, label: String, value: String, tint: Color = NG.inkFaint) {
+private fun MetaRow(icon: Int, label: String, value: String, tint: Color = NG.inkFaint) {
     Box(
         Modifier
             .fillMaxWidth()
@@ -247,7 +246,7 @@ private fun MetaRow(icon: ImageVector, label: String, value: String, tint: Color
                 .background(tint.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = tint, modifier = Modifier.size(17.dp))
+            GuardIcon(icon, null, modifier = Modifier.size(17.dp))
         }
         Spacer(Modifier.width(12.dp))
         Column {

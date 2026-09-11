@@ -6,3 +6,5 @@
 publish-work/
 *.apk
 **/__pycache__/
+.env
+art/meowa/
