@@ -224,7 +224,7 @@ private fun RecentSearchList(
                         .background(NG.card)
                         .border(1.dp, NG.lineSoft, NG.rowShape)
                         .clickable { onPick(term) }
-                        .padding(start = 14.dp, end = 4.dp, vertical = 2.dp),
+                        .padding(start = 14.dp, top = 2.dp, end = 4.dp, bottom = 2.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     GuardIcon(GuardIcons.Clock, null, modifier = Modifier.size(16.dp))

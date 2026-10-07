@@ -27,7 +27,7 @@ class RealDataMigrationTest(unittest.TestCase):
         db.execute('DELETE FROM records')
         dao = (DATA / 'NotiGuardDao.kt').read_text(encoding='utf-8-sig')
         stats = next(query for query in re.findall(r'"""(.*?)"""', dao, re.S) if 'AS appCount' in query)
-        self.assertEqual(db.execute(stats).fetchone(), (0, 0, 0))
+        self.assertEqual(db.execute(stats, {"since": 0}).fetchone(), (0, 0, 0))
 
 if __name__ == '__main__':
     unittest.main()

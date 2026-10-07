@@ -99,23 +99,29 @@ class NotiGuardRepository(
         recentSearchWrites.launch { rememberSearch(query) }
     }
 
-    suspend fun rememberSearch(query: String) = recentSearchGate.withLock {
-        context.dataStore.edit { prefs ->
-            val current = RecentSearches.decode(prefs[recentSearchKey])
-            val next = RecentSearches.remember(current, query)
-            if (next != current) prefs[recentSearchKey] = RecentSearches.encode(next)
+    suspend fun rememberSearch(query: String) {
+        recentSearchGate.withLock {
+            context.dataStore.edit { prefs ->
+                val current = RecentSearches.decode(prefs[recentSearchKey])
+                val next = RecentSearches.remember(current, query)
+                if (next != current) prefs[recentSearchKey] = RecentSearches.encode(next)
+            }
         }
     }
 
-    suspend fun forgetSearch(query: String) = recentSearchGate.withLock {
-        context.dataStore.edit { prefs ->
-            val next = RecentSearches.forget(RecentSearches.decode(prefs[recentSearchKey]), query)
-            prefs[recentSearchKey] = RecentSearches.encode(next)
+    suspend fun forgetSearch(query: String) {
+        recentSearchGate.withLock {
+            context.dataStore.edit { prefs ->
+                val next = RecentSearches.forget(RecentSearches.decode(prefs[recentSearchKey]), query)
+                prefs[recentSearchKey] = RecentSearches.encode(next)
+            }
         }
     }
 
-    suspend fun clearRecentSearches() = recentSearchGate.withLock {
-        context.dataStore.edit { it.remove(recentSearchKey) }
+    suspend fun clearRecentSearches() {
+        recentSearchGate.withLock {
+            context.dataStore.edit { it.remove(recentSearchKey) }
+        }
     }
 
     fun rule(packageName: String): Flow<AppRule?> = dao.observeRule(packageName)
