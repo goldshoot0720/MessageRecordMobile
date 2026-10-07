@@ -24,14 +24,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,6 +52,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.notiguard.data.AppSummary
 import com.notiguard.ui.HomeUiState
+import com.notiguard.ui.PopularApp
+import com.notiguard.ui.PopularApps
 import com.notiguard.ui.components.AppGlyph
 import com.notiguard.ui.components.ChipButton
 import com.notiguard.ui.components.EndNote
@@ -51,7 +62,9 @@ import com.notiguard.ui.components.GuardSwitch
 import com.notiguard.ui.components.IconAction
 import com.notiguard.ui.components.SectionHeader
 import com.notiguard.ui.components.StatTile
+import com.notiguard.ui.components.TimeRangeBar
 import com.notiguard.ui.components.screenBackground
+import com.notiguard.data.TimeRange
 import com.notiguard.ui.theme.NG
 import com.notiguard.ui.components.GuardIcon
 import com.notiguard.ui.components.GuardIcons
@@ -60,14 +73,28 @@ import com.notiguard.ui.components.GuardIcons
 fun HomeScreen(
     state: HomeUiState,
     iconFor: (String) -> ImageBitmap?,
+    installedFor: (String) -> Boolean,
     onToggleMaster: (Boolean) -> Unit,
     onOpenSearch: () -> Unit,
     onOpenApp: (AppSummary) -> Unit,
+    onOpenPopular: (PopularApp) -> Unit,
     onOpenSettings: () -> Unit,
+    onTimeRange: (TimeRange) -> Unit,
 ) {
-    var selectedPackage by rememberSaveable { mutableStateOf<String?>(null) }
     var showStats by rememberSaveable { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var resumeTick by remember { mutableIntStateOf(0) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) resumeTick++
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     val visibleApps = state.apps
+    val summaries = visibleApps.associateBy { it.packageName }
+    // 回到前景才重查安裝狀態，剛裝上的 LINE 會排到常用列前面。
+    val popular = remember(resumeTick) { PopularApps.ordered(installedFor) }
     if (showStats) {
         StatsDialog(state = state, onDismiss = { showStats = false })
     }
@@ -108,9 +135,23 @@ fun HomeScreen(
             onToggle = onToggleMaster,
         )
 
+        TimeRangeBar(
+            selected = state.timeRange,
+            onSelect = onTimeRange,
+            modifier = Modifier.padding(top = 14.dp),
+        )
+
+        PopularRail(
+            apps = popular,
+            summaries = summaries,
+            iconFor = iconFor,
+            installedFor = installedFor,
+            onOpen = onOpenPopular,
+        )
+
         // ---- 三格統計 ----
         Row(
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp).fillMaxWidth(),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(11.dp),
         ) {
             StatTile(Modifier.weight(1f), "${state.stats.total}", "總通知", NG.blueLight, GuardIcons.Message)
@@ -120,8 +161,8 @@ fun HomeScreen(
 
         // ---- 區塊標題 ----
         SectionHeader(
-            title = "應用程式",
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 6.dp, bottom = 10.dp),
+            title = "已記錄",
+            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 2.dp, bottom = 10.dp),
         ) {
             ChipButton("搜尋通知", GuardIcons.Search, onOpenSearch)
         }
@@ -129,21 +170,19 @@ fun HomeScreen(
         // ---- App 清單 ----
         Box(Modifier.weight(1f)) {
             if (visibleApps.isEmpty()) {
-                EmptyApps(Modifier.align(Alignment.Center))
+                EmptyApps(state.timeRange, Modifier.align(Alignment.Center))
             } else {
                 LazyColumn(
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp),
-                    verticalArrangement = Arrangement.spacedBy(0.dp),
+                    contentPadding = PaddingValues(start = 20.dp, end = 20.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     items(visibleApps, key = { it.packageName }) { app ->
                         AppRow(
                             app = app,
                             icon = iconFor(app.packageName),
                             guarding = state.masterEnabled && app.isBlocking,
-                            selected = app.packageName == (selectedPackage ?: state.apps.firstOrNull()?.packageName),
-                            onClick = { selectedPackage = app.packageName; onOpenApp(app) },
+                            onClick = { onOpenApp(app) },
                         )
-                        Box(Modifier.fillMaxWidth().height(1.dp).background(NG.lineSoft))
                     }
                     item {
                         EndNote("已顯示全部 ${state.stats.appCount} 個應用程式")
@@ -153,6 +192,95 @@ fun HomeScreen(
         }
 
         BottomTabs(onStats = { showStats = true }, onSettings = onOpenSettings)
+    }
+}
+
+/** 常用應用橫列。已安裝的排前面，沒裝的仍可點進詳情預先設定。 */
+@Composable
+private fun PopularRail(
+    apps: List<PopularApp>,
+    summaries: Map<String, AppSummary>,
+    iconFor: (String) -> ImageBitmap?,
+    installedFor: (String) -> Boolean,
+    onOpen: (PopularApp) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .padding(start = 20.dp, end = 20.dp, top = 14.dp)
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(NG.card.copy(alpha = 0.72f))
+            .border(1.dp, NG.lineSoft, RoundedCornerShape(20.dp))
+            .padding(top = 12.dp, bottom = 14.dp),
+    ) {
+        SectionHeader(
+            title = "常用",
+            modifier = Modifier.padding(horizontal = 14.dp),
+        )
+        Spacer(Modifier.height(12.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 14.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            items(apps, key = { it.packageName }) { app ->
+                PopularTile(
+                    app = app,
+                    summary = summaries[app.packageName],
+                    icon = iconFor(app.packageName),
+                    installed = installedFor(app.packageName),
+                    onClick = { onOpen(app) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun PopularTile(
+    app: PopularApp,
+    summary: AppSummary?,
+    icon: ImageBitmap?,
+    installed: Boolean,
+    onClick: () -> Unit,
+) {
+    val count = summary?.total ?: 0
+    val caption = when {
+        count > 0 -> "$count 則"
+        installed -> "尚無紀錄"
+        else -> "未安裝"
+    }
+    Column(
+        modifier = Modifier
+            .width(84.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(NG.cardMuted)
+            .border(1.dp, NG.lineSoft, RoundedCornerShape(16.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        AppGlyph(
+            packageName = app.packageName,
+            appLabel = app.label,
+            icon = icon,
+            size = 46,
+            modifier = Modifier.graphicsLayer { alpha = if (installed || count > 0) 1f else 0.5f },
+        )
+        Spacer(Modifier.height(8.dp))
+        Text(
+            app.label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = NG.ink,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            caption,
+            fontSize = 10.5f.sp,
+            color = if (count > 0) NG.blueLight else NG.inkFaint,
+            maxLines = 1,
+        )
     }
 }
 
@@ -200,7 +328,7 @@ private fun MasterCard(enabled: Boolean, blockedToday: Int, onToggle: (Boolean) 
 }
 
 @Composable
-private fun EmptyApps(modifier: Modifier = Modifier) {
+private fun EmptyApps(range: TimeRange, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier.padding(40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -216,10 +344,11 @@ private fun EmptyApps(modifier: Modifier = Modifier) {
             GuardIcon(GuardIcons.Bell, null, modifier = Modifier.size(32.dp))
         }
         Spacer(Modifier.height(16.dp))
-        Text("還沒有任何紀錄", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = NG.inkMuted)
+        Text("這個範圍還沒有紀錄", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = NG.inkMuted)
         Spacer(Modifier.height(6.dp))
         Text(
-            "授權通知存取後，新進的通知會即時出現在這裡。",
+            if (range == TimeRange.ALL) "點上方的 LINE 或其他常用應用先查看，授權後新通知也會出現在這裡。"
+            else "目前是${range.label}。可以改選一個月、一年或全部，新通知也會出現在這裡。",
             style = NG.body,
             color = NG.inkFaint,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -232,17 +361,16 @@ private fun AppRow(
     app: AppSummary,
     icon: ImageBitmap?,
     guarding: Boolean,
-    selected: Boolean,
     onClick: () -> Unit,
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clip(NG.rowShape)
+            .background(NG.card)
+            .border(1.dp, NG.lineSoft, NG.rowShape)
             .clickable(onClick = onClick)
-            .background(if (selected) NG.blueSoft else Color.Transparent)
-            .border(1.dp, if (selected) NG.blue.copy(alpha = 0.7f) else Color.Transparent, NG.rowShape)
-            .padding(horizontal = 8.dp, vertical = 9.dp),
+            .padding(horizontal = 12.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AppGlyph(app.packageName, app.appLabel, icon, size = 40)
@@ -292,10 +420,15 @@ private fun StatsDialog(state: HomeUiState, onDismiss: () -> Unit) {
         containerColor = NG.card,
         shape = NG.cardShape,
         icon = { GlyphBadge(GuardIcons.Chart, size = 38) },
-        title = { Text("通知統計", style = NG.sectionTitle, color = NG.ink) },
+        title = {
+            Column {
+                Text("通知統計", style = NG.sectionTitle, color = NG.ink)
+                Text(state.timeRange.label, style = NG.caption, color = NG.inkFaint)
+            }
+        },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatLine(GuardIcons.Message, "累計通知", "${state.stats.total}", NG.blueLight)
+                StatLine(GuardIcons.Message, "通知", "${state.stats.total}", NG.blueLight)
                 StatLine(GuardIcons.Shield, "已攔截", "${state.stats.blockedCount}", NG.green)
                 StatLine(GuardIcons.Check, "已允許", "${state.stats.total - state.stats.blockedCount}", NG.blueLight)
                 StatLine(GuardIcons.Clock, "今日已攔截", "${state.blockedToday}", NG.green)

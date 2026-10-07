@@ -22,9 +22,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -48,10 +51,14 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.RoundRect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import com.notiguard.data.TimeRange
 import com.notiguard.ui.theme.NG
 
 /**
@@ -71,6 +78,9 @@ object Brand {
         "com.android.systemui" to (Color(0xFF33445C) to "系"),
         "com.whatsapp" to (Color(0xFF25D366) to "WA"),
         "org.telegram.messenger" to (Color(0xFF2AABEE) to "TG"),
+        "com.facebook.orca" to (Color(0xFF0084FF) to "M"),
+        "com.tencent.mm" to (Color(0xFF07C160) to "微"),
+        "com.instagram.barcelona" to (Color(0xFF111111) to "@"),
         "com.Slack" to (Color(0xFF4A154B) to "S"),
         "com.discord" to (Color(0xFF5865F2) to "DC"),
     )
@@ -98,6 +108,7 @@ fun AppGlyph(
     appLabel: String,
     icon: ImageBitmap?,
     size: Int = 40,
+    modifier: Modifier = Modifier,
 ) {
     val shape = if (size >= 40) NG.iconShape else NG.iconShapeSmall
     if (icon != null) {
@@ -105,13 +116,13 @@ fun AppGlyph(
             bitmap = icon,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.size(size.dp).clip(shape),
+            modifier = modifier.size(size.dp).clip(shape),
         )
         return
     }
     val color = Brand.color(packageName)
     Box(
-        modifier = Modifier
+        modifier = modifier
             .size(size.dp)
             .clip(shape)
             .background(if (packageName == "com.google.android.gm" || packageName == "com.android.chrome") Color.White else color),
@@ -173,14 +184,101 @@ fun AppGlyph(
             }
         } else if (packageName == "com.android.systemui") {
             GuardIcon(GuardIcons.Settings, null, modifier = Modifier.size((size * 0.72f).dp))
+        } else if (packageName == "com.facebook.orca") {
+            MessengerMark(color, size)
+        } else if (packageName == "com.whatsapp") {
+            HandsetMark(size)
+        } else if (packageName == "org.telegram.messenger") {
+            TelegramMark(size)
+        } else if (packageName == "com.tencent.mm") {
+            WeChatMark(color, size)
         } else {
-        Text(
-            text = Brand.short(packageName, appLabel),
-            color = Color.White,
-            fontSize = (size * 0.34f).sp,
-            fontWeight = FontWeight.ExtraBold,
-        )
+            Text(
+                text = Brand.short(packageName, appLabel),
+                color = Color.White,
+                fontSize = (size * 0.34f).sp,
+                fontWeight = FontWeight.ExtraBold,
+            )
         }
+    }
+}
+
+/** Messenger：白對話泡加一條品牌色閃電。 */
+@Composable
+private fun MessengerMark(color: Color, size: Int) {
+    Canvas(Modifier.size((size * 0.78f).dp)) {
+        val w = this.size.width
+        val h = this.size.height
+        drawCircle(Color.White, radius = w * 0.42f, center = Offset(w * 0.50f, h * 0.40f))
+        drawPath(Path().apply {
+            moveTo(w * 0.24f, h * 0.62f)
+            lineTo(w * 0.14f, h * 0.98f)
+            lineTo(w * 0.52f, h * 0.68f)
+            close()
+        }, Color.White)
+        drawPath(Path().apply {
+            moveTo(w * 0.58f, h * 0.16f)
+            lineTo(w * 0.32f, h * 0.46f)
+            lineTo(w * 0.48f, h * 0.46f)
+            lineTo(w * 0.40f, h * 0.68f)
+            lineTo(w * 0.74f, h * 0.34f)
+            lineTo(w * 0.56f, h * 0.34f)
+            close()
+        }, color)
+    }
+}
+
+/** WhatsApp：斜放的白色話筒，底色已經是品牌綠。 */
+@Composable
+private fun HandsetMark(size: Int) {
+    Canvas(Modifier.size((size * 0.62f).dp)) {
+        val w = this.size.width
+        val h = this.size.height
+        rotate(-38f, pivot = center) {
+            val handset = Path().apply {
+                addRoundRect(RoundRect(w * 0.16f, h * 0.06f, w * 0.84f, h * 0.32f, CornerRadius(w * 0.12f)))
+                addRoundRect(RoundRect(w * 0.36f, h * 0.24f, w * 0.64f, h * 0.76f, CornerRadius(w * 0.08f)))
+                addRoundRect(RoundRect(w * 0.16f, h * 0.68f, w * 0.84f, h * 0.94f, CornerRadius(w * 0.12f)))
+            }
+            drawPath(handset, Color.White)
+        }
+    }
+}
+
+/** Telegram：白紙飛機。 */
+@Composable
+private fun TelegramMark(size: Int) {
+    Canvas(Modifier.size((size * 0.68f).dp)) {
+        val w = this.size.width
+        val h = this.size.height
+        drawPath(Path().apply {
+            moveTo(w * 0.02f, h * 0.44f)
+            lineTo(w * 0.98f, h * 0.08f)
+            lineTo(w * 0.60f, h * 0.96f)
+            lineTo(w * 0.46f, h * 0.56f)
+            close()
+        }, Color.White)
+        drawPath(Path().apply {
+            moveTo(w * 0.46f, h * 0.56f)
+            lineTo(w * 0.98f, h * 0.08f)
+            lineTo(w * 0.68f, h * 0.56f)
+            close()
+        }, Color(0xFFB8E4FF))
+    }
+}
+
+/** 微信：兩顆對話泡，眼睛用品牌綠挖空。 */
+@Composable
+private fun WeChatMark(color: Color, size: Int) {
+    Canvas(Modifier.size((size * 0.78f).dp)) {
+        val w = this.size.width
+        val h = this.size.height
+        drawCircle(Color.White, radius = w * 0.30f, center = Offset(w * 0.36f, h * 0.38f))
+        drawCircle(Color.White, radius = w * 0.23f, center = Offset(w * 0.68f, h * 0.64f))
+        drawCircle(color, radius = w * 0.045f, center = Offset(w * 0.27f, h * 0.36f))
+        drawCircle(color, radius = w * 0.045f, center = Offset(w * 0.44f, h * 0.36f))
+        drawCircle(color, radius = w * 0.034f, center = Offset(w * 0.61f, h * 0.62f))
+        drawCircle(color, radius = w * 0.034f, center = Offset(w * 0.74f, h * 0.62f))
     }
 }
 
@@ -475,6 +573,44 @@ fun StatusPill(blocked: Boolean, expanded: Boolean = false) {
         Box(Modifier.size(5.dp).clip(CircleShape).background(fg))
         Spacer(Modifier.width(5.dp))
         Text(text = label, style = NG.pill, color = fg)
+    }
+}
+
+/** 通知時間範圍。六個選項橫向滑動，選中的用主色。 */
+@Composable
+fun TimeRangeBar(
+    selected: TimeRange,
+    onSelect: (TimeRange) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyRow(
+        modifier = modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        items(TimeRange.entries, key = { it.name }) { range ->
+            val active = range == selected
+            val background by animateColorAsState(
+                targetValue = if (active) NG.actionBlue else NG.cardMuted,
+                label = "timeRange",
+            )
+            val content by animateColorAsState(
+                targetValue = if (active) Color.White else NG.inkMuted,
+                label = "timeRangeInk",
+            )
+            Text(
+                text = range.label,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .background(background)
+                    .border(1.dp, if (active) NG.blueLight.copy(alpha = 0.5f) else NG.lineSoft, CircleShape)
+                    .selectable(selected = active, role = Role.Tab, onClick = { onSelect(range) })
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                color = content,
+                fontSize = 13.sp,
+                fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
+            )
+        }
     }
 }
 

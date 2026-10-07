@@ -51,11 +51,12 @@ interface NotiGuardDao {
                ru.blocking              AS blocking
         FROM records r
         LEFT JOIN app_rules ru ON ru.packageName = r.packageName
+        WHERE r.postedAt >= :since
         GROUP BY r.packageName
         ORDER BY total DESC, lastPostedAt DESC
         """
     )
-    fun observeAppSummaries(): Flow<List<AppSummary>>
+    fun observeAppSummaries(since: Long): Flow<List<AppSummary>>
 
     @Query(
         """
@@ -63,9 +64,10 @@ interface NotiGuardDao {
                COALESCE(SUM(CASE WHEN blocked THEN 1 ELSE 0 END), 0)   AS blockedCount,
                COUNT(DISTINCT packageName)                AS appCount
         FROM records
+        WHERE postedAt >= :since
         """
     )
-    fun observeStats(): Flow<GuardStats>
+    fun observeStats(since: Long): Flow<GuardStats>
 
     /** 今日（傳入當地零點的 epoch 毫秒）已攔截則數。 */
     @Query("SELECT COUNT(*) FROM records WHERE blocked AND postedAt >= :since")
@@ -76,28 +78,29 @@ interface NotiGuardDao {
     @Query(
         """
         SELECT * FROM records
-        WHERE packageName = :packageName
+        WHERE packageName = :packageName AND postedAt >= :since
         ORDER BY postedAt DESC
         """
     )
-    fun observeRecords(packageName: String): Flow<List<NotificationRecord>>
+    fun observeRecords(packageName: String, since: Long): Flow<List<NotificationRecord>>
 
     @Query(
         """
         SELECT * FROM records
-        WHERE packageName = :packageName AND blocked = :blocked
+        WHERE packageName = :packageName AND blocked = :blocked AND postedAt >= :since
         ORDER BY postedAt DESC
         """
     )
-    fun observeRecords(packageName: String, blocked: Boolean): Flow<List<NotificationRecord>>
+    fun observeRecords(packageName: String, blocked: Boolean, since: Long): Flow<List<NotificationRecord>>
 
-    @Query("SELECT COUNT(*) FROM records WHERE packageName = :packageName")
-    fun observeCount(packageName: String): Flow<Int>
+    @Query("SELECT COUNT(*) FROM records WHERE packageName = :packageName AND postedAt >= :since")
+    fun observeCount(packageName: String, since: Long): Flow<Int>
 
     /** Literal substring search: %, _ and quotes are ordinary text, not SQL patterns. */
     @Query("""
         SELECT * FROM records
-        WHERE (:packageName IS NULL OR packageName = :packageName)
+        WHERE postedAt >= :since
+          AND (:packageName IS NULL OR packageName = :packageName)
           AND (:blocked IS NULL OR blocked = :blocked)
           AND (instr(lower(appLabel), lower(:query)) > 0
             OR instr(lower(packageName), lower(:query)) > 0
@@ -105,7 +108,7 @@ interface NotiGuardDao {
             OR instr(lower(text), lower(:query)) > 0)
         ORDER BY postedAt DESC, id DESC
     """)
-    fun searchRecords(query: String, packageName: String?, blocked: Boolean?): Flow<List<NotificationRecord>>
+    fun searchRecords(query: String, packageName: String?, blocked: Boolean?, since: Long): Flow<List<NotificationRecord>>
 
     // ---------- 詳情 ----------
 

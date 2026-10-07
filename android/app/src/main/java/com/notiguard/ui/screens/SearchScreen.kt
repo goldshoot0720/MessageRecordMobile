@@ -9,6 +9,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -23,6 +24,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.notiguard.data.NotificationRecord
 import com.notiguard.data.RecordFilter
+import com.notiguard.data.TimeRange
 import com.notiguard.ui.Fmt
 import com.notiguard.ui.SearchResults
 import androidx.compose.foundation.border
@@ -39,6 +41,7 @@ import com.notiguard.ui.components.GuardIcons
 import com.notiguard.ui.components.IconAction
 import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.components.SegmentedTabs
+import com.notiguard.ui.components.TimeRangeBar
 import com.notiguard.ui.components.StatusPill
 import com.notiguard.ui.theme.NG
 
@@ -47,10 +50,17 @@ fun SearchScreen(
     appLabel: String,
     query: String,
     filter: RecordFilter,
+    timeRange: TimeRange,
     results: SearchResults,
+    recent: List<String>,
     onQuery: (String) -> Unit,
     onFilter: (RecordFilter) -> Unit,
+    onTimeRange: (TimeRange) -> Unit,
     onRetry: () -> Unit,
+    onCommit: () -> Unit,
+    onPickRecent: (String) -> Unit,
+    onRemoveRecent: (String) -> Unit,
+    onClearRecent: () -> Unit,
     onBack: () -> Unit,
     onOpenRecord: (NotificationRecord) -> Unit,
     iconFor: (String) -> ImageBitmap?,
@@ -62,6 +72,10 @@ fun SearchScreen(
     LaunchedEffect(Unit) {
         searchFocus.requestFocus()
         keyboard?.show()
+    }
+    // 離開搜尋頁時把已經輸入的關鍵字留下，下次進來不用重打。
+    DisposableEffect(Unit) {
+        onDispose { onCommit() }
     }
     Column(Modifier.fillMaxSize().screenBackground().safeDrawingPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -75,7 +89,10 @@ fun SearchScreen(
             value = query, onValueChange = onQuery, singleLine = true,
             placeholder = { Text(if (appLabel.isBlank()) "App 名稱、標題或內容" else "輸入標題或內容") },
             leadingIcon = { GuardIcon(GuardIcons.Search, null, modifier = Modifier.size(19.dp)) },
-            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = { onQuery("") }) {
+            trailingIcon = { if (query.isNotEmpty()) IconButton(onClick = {
+                onCommit()
+                onQuery("")
+            }) {
                 GuardIcon(GuardIcons.Close, "清除搜尋", modifier = Modifier.size(18.dp))
             } },
             colors = OutlinedTextFieldDefaults.colors(
@@ -92,11 +109,15 @@ fun SearchScreen(
                 unfocusedPlaceholderColor = NG.inkFaint,
             ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
+            keyboardActions = KeyboardActions(onSearch = {
+                onCommit()
+                focus.clearFocus()
+            }),
             shape = NG.buttonShape,
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)
                 .focusRequester(searchFocus),
         )
+        TimeRangeBar(selected = timeRange, onSelect = onTimeRange)
         SegmentedTabs(
             options = listOf(RecordFilter.ALL to "全部", RecordFilter.BLOCKED to "已攔截", RecordFilter.ALLOWED to "已允許"),
             selected = filter, onSelect = onFilter,
@@ -110,6 +131,13 @@ fun SearchScreen(
             },
         )
         when {
+            query.isBlank() && recent.isNotEmpty() -> RecentSearchList(
+                queries = recent,
+                onPick = onPickRecent,
+                onRemove = onRemoveRecent,
+                onClear = onClearRecent,
+                modifier = Modifier.weight(1f),
+            )
             query.isBlank() -> SearchState(GuardIcons.Search, "輸入關鍵字，搜尋已儲存的通知。")
             results.loading -> SearchState(GuardIcons.Refresh, "搜尋中…")
             results.failed -> {
@@ -117,7 +145,10 @@ fun SearchScreen(
                 GuardButton("重試", onRetry, icon = GuardIcons.Refresh, tone = ButtonTone.Tonal,
                     fillWidth = false, modifier = Modifier.align(Alignment.CenterHorizontally))
             }
-            results.records.isEmpty() -> SearchState(GuardIcons.Filter, "找不到符合的通知。\n試試其他關鍵字，或切換篩選條件。")
+            results.records.isEmpty() -> SearchState(
+                GuardIcons.Filter,
+                "找不到符合的通知。\n試試其他關鍵字、切換篩選，或把時間改成全部。",
+            )
             else -> {
                 Row(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
@@ -156,6 +187,57 @@ fun SearchScreen(
                             Text(Fmt.timestamp(record.postedAt), style = NG.caption, color = NG.inkFaint,
                                 modifier = Modifier.padding(top = 8.dp))
                         }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 關鍵字空著時列出最近搜過的通知。點一列就再搜一次，叉叉只刪那一筆。 */
+@Composable
+private fun RecentSearchList(
+    queries: List<String>,
+    onPick: (String) -> Unit,
+    onRemove: (String) -> Unit,
+    onClear: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) {
+        Row(
+            modifier = Modifier.padding(start = 20.dp, end = 8.dp, top = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("最近搜尋", style = NG.sectionTitle, color = NG.ink, modifier = Modifier.weight(1f))
+            TextButton(onClick = onClear) { Text("清除", color = NG.blueLight, fontSize = 14.sp) }
+        }
+        LazyColumn(
+            modifier = Modifier.weight(1f),
+            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            items(queries, key = { it }) { term ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(NG.rowShape)
+                        .background(NG.card)
+                        .border(1.dp, NG.lineSoft, NG.rowShape)
+                        .clickable { onPick(term) }
+                        .padding(start = 14.dp, end = 4.dp, vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    GuardIcon(GuardIcons.Clock, null, modifier = Modifier.size(16.dp))
+                    Text(
+                        term,
+                        style = NG.appName,
+                        color = NG.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).padding(horizontal = 10.dp),
+                    )
+                    IconButton(onClick = { onRemove(term) }) {
+                        GuardIcon(GuardIcons.Close, "移除「$term」", modifier = Modifier.size(16.dp))
                     }
                 }
             }

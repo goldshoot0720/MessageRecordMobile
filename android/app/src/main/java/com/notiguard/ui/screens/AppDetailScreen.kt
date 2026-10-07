@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.notiguard.data.NotificationRecord
 import com.notiguard.data.RecordFilter
+import com.notiguard.data.TimeRange
 import com.notiguard.ui.AppDetailUiState
 import com.notiguard.ui.Fmt
 import com.notiguard.ui.components.AppGlyph
@@ -49,6 +50,7 @@ import com.notiguard.ui.components.GuardSwitch
 import com.notiguard.ui.components.IconAction
 import com.notiguard.ui.components.screenBackground
 import com.notiguard.ui.components.SegmentedTabs
+import com.notiguard.ui.components.TimeRangeBar
 import com.notiguard.ui.components.StatusPill
 import com.notiguard.ui.theme.NG
 import com.notiguard.ui.components.GuardIcon
@@ -60,6 +62,7 @@ fun AppDetailScreen(
     icon: ImageBitmap?,
     onBack: () -> Unit,
     onSetFilter: (RecordFilter) -> Unit,
+    onSetTimeRange: (TimeRange) -> Unit,
     onOpenSearch: () -> Unit,
     onSetBlocking: (Boolean) -> Unit,
     onOpenRecord: (NotificationRecord) -> Unit,
@@ -156,6 +159,12 @@ fun AppDetailScreen(
             )
         }
 
+        TimeRangeBar(
+            selected = state.timeRange,
+            onSelect = onSetTimeRange,
+            modifier = Modifier.padding(top = 14.dp),
+        )
+
         // ---- 三段切換 ----
         SegmentedTabs(
             options = listOf(
@@ -165,7 +174,7 @@ fun AppDetailScreen(
             ),
             selected = state.filter,
             onSelect = onSetFilter,
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp),
+            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             iconFor = {
                 when (it) {
                     RecordFilter.ALL -> GuardIcons.Apps
@@ -180,9 +189,13 @@ fun AppDetailScreen(
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                 Text(
                     when (state.filter) {
-                        RecordFilter.BLOCKED -> "這支應用程式目前沒有被攔截的通知。\n切回「全部」看看完整紀錄。"
-                        RecordFilter.ALLOWED -> "這支應用程式目前沒有被放行的通知。\n切回「全部」看看完整紀錄。"
-                        RecordFilter.ALL -> "還沒有這支應用程式的紀錄。"
+                        RecordFilter.BLOCKED -> "${state.timeRange.label}沒有被攔截的通知。\n切回「全部」或拉長時間看看。"
+                        RecordFilter.ALLOWED -> "${state.timeRange.label}沒有被放行的通知。\n切回「全部」或拉長時間看看。"
+                        RecordFilter.ALL -> if (state.timeRange == TimeRange.ALL) {
+                            "還沒有這支應用程式的紀錄。"
+                        } else {
+                            "${state.timeRange.label}還沒有這支應用程式的紀錄。\n可以改選更長的時間。"
+                        }
                     },
                     style = NG.body,
                     color = NG.inkFaint,

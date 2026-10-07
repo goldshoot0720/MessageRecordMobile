@@ -11,6 +11,7 @@ import com.notiguard.data.NotiGuardRepository
 import com.notiguard.data.NotificationRecord
 import com.notiguard.data.RecordExporter
 import com.notiguard.data.RecordFilter
+import com.notiguard.data.TimeRange
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,21 +30,30 @@ data class HomeUiState(
     val stats: GuardStats = GuardStats(0, 0, 0),
     val blockedToday: Int = 0,
     val apps: List<AppSummary> = emptyList(),
+    val timeRange: TimeRange = TimeRange.WEEK,
 )
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(private val repo: NotiGuardRepository) : ViewModel() {
 
-    val state: StateFlow<HomeUiState> = combine(
-        repo.masterEnabled,
-        repo.stats,
-        repo.blockedToday,
-        repo.appSummaries,
-    ) { master, stats, today, apps ->
-        HomeUiState(master, stats, today, apps)
+    val state: StateFlow<HomeUiState> = repo.timeRange.flatMapLatest { range ->
+        val since = range.since()
+        combine(
+            repo.masterEnabled,
+            repo.stats(since),
+            repo.blockedToday,
+            repo.appSummaries(since),
+        ) { master, stats, today, apps ->
+            HomeUiState(master, stats, today, apps, range)
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     fun setMaster(enabled: Boolean) {
         viewModelScope.launch { repo.setMasterEnabled(enabled) }
+    }
+
+    fun setTimeRange(range: TimeRange) {
+        viewModelScope.launch { repo.setTimeRange(range) }
     }
 }
 
@@ -55,6 +65,7 @@ data class AppDetailUiState(
     val total: Int = 0,
     val blocking: Boolean = true,
     val filter: RecordFilter = RecordFilter.ALL,
+    val timeRange: TimeRange = TimeRange.WEEK,
     val records: List<NotificationRecord> = emptyList(),
 )
 
@@ -67,20 +78,25 @@ class AppDetailViewModel(
 
     private val filter = MutableStateFlow(RecordFilter.ALL)
 
-    private val records = filter.flatMapLatest { repo.records(packageName, it) }
+    private val records = combine(filter, repo.timeRange) { current, range -> current to range.since() }
+        .flatMapLatest { (current, since) -> repo.records(packageName, current, since) }
+
+    private val totals = repo.timeRange.flatMapLatest { repo.recordCount(packageName, it.since()) }
 
     val state: StateFlow<AppDetailUiState> = combine(
-        repo.recordCount(packageName),
+        totals,
         repo.rule(packageName),
         filter,
         records,
-    ) { total, rule: AppRule?, currentFilter, list ->
+        repo.timeRange,
+    ) { total, rule: AppRule?, currentFilter, list, range ->
         AppDetailUiState(
             packageName = packageName,
             appLabel = appLabel,
             total = total,
             blocking = rule?.blocking ?: true,
             filter = currentFilter,
+            timeRange = range,
             records = list,
         )
     }.stateIn(
@@ -91,6 +107,10 @@ class AppDetailViewModel(
 
     fun setFilter(value: RecordFilter) {
         filter.value = value
+    }
+
+    fun setTimeRange(range: TimeRange) {
+        viewModelScope.launch { repo.setTimeRange(range) }
     }
 
     fun setBlocking(blocking: Boolean) {

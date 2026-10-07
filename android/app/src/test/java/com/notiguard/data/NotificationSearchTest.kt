@@ -38,8 +38,12 @@ class NotificationSearchTest {
         uid = uid, packageName = pkg, appLabel = label, title = title, text = text,
         postedAt = time, blocked = blocked)
 
-    private suspend fun find(query: String, pkg: String? = null, filter: RecordFilter = RecordFilter.ALL) =
-        repo.searchRecords(query, pkg, filter).first().map { it.uid }
+    private suspend fun find(
+        query: String,
+        pkg: String? = null,
+        filter: RecordFilter = RecordFilter.ALL,
+        since: Long = 0L,
+    ) = repo.searchRecords(query, pkg, filter, since).first().map { it.uid }
 
     @Test fun matchesChineseTitleAndBodyInNewestFirstOrder() = runBlocking {
         assertEquals(listOf("b", "c", "a"), find(" 開會 "))
@@ -77,5 +81,19 @@ class NotificationSearchTest {
             db.dao().insertRecord(record("d", "com.mail", "Mail", "新通知", "內容", 4, false))
             assertEquals("d", updated.await().single().uid)
         }
+    }
+
+    @Test fun weekWindowKeepsRecentNotificationsAndDropsOlderOnes() = runBlocking {
+        val now = System.currentTimeMillis()
+        val day = 24L * 60 * 60 * 1000
+        db.dao().insertRecords(listOf(
+            record("old", "jp.line", "LINE", "舊", "時間範圍", now - 10 * day, true),
+            record("new", "jp.line", "LINE", "新", "時間範圍", now - day, false),
+        ))
+        val week = TimeRange.WEEK.since(now)
+        assertEquals(listOf("new"), find("時間範圍", since = week))
+        assertEquals(listOf("new", "old"), find("時間範圍"))
+        assertEquals(1, repo.appSummaries(week).first().first { it.packageName == "jp.line" }.total)
+        assertEquals(1, repo.stats(week).first().total)
     }
 }

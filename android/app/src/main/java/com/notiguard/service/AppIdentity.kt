@@ -29,6 +29,10 @@ class AppIdentity(context: Context) {
         }.getOrElse { packageName.substringAfterLast('.') }
     }
 
+    /** 不快取。使用者可能剛裝上 LINE，下次進首頁就要排到常用列前面。 */
+    fun isInstalled(packageName: String): Boolean =
+        runCatching { pm.getApplicationInfo(packageName, 0) }.isSuccess
+
     /** 回傳 App 圖示；查不到時回 null，UI 會退回文字圖示。 */
     fun icon(packageName: String): ImageBitmap? = icons.getOrPut(packageName) {
         val drawable = runCatching { pm.getApplicationIcon(packageName) }.getOrNull()

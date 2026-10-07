@@ -4,6 +4,7 @@ import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import java.util.Calendar
 
 /** 紀錄的取得方式。與 shared/notiguard-record.schema.json 的 `source` 對應。 */
 object RecordSource {
@@ -77,6 +78,37 @@ data class GuardStats(
 
 /** 應用程式頁的三段切換。 */
 enum class RecordFilter { ALL, BLOCKED, ALLOWED }
+
+/**
+ * 通知清單、統計與搜尋共用的時間範圍。預設一週，起點用當地日曆往回推。
+ * [since] 回 0 代表不設下限。
+ */
+enum class TimeRange(val label: String) {
+    WEEK("一週之內"),
+    MONTH("一個月之內"),
+    THREE_MONTHS("三個月之內"),
+    HALF_YEAR("半年之內"),
+    YEAR("一年之內"),
+    ALL("全部");
+
+    fun since(now: Long = System.currentTimeMillis()): Long {
+        if (this == ALL) return 0L
+        val calendar = Calendar.getInstance().apply { timeInMillis = now }
+        when (this) {
+            WEEK -> calendar.add(Calendar.DAY_OF_YEAR, -7)
+            MONTH -> calendar.add(Calendar.MONTH, -1)
+            THREE_MONTHS -> calendar.add(Calendar.MONTH, -3)
+            HALF_YEAR -> calendar.add(Calendar.MONTH, -6)
+            YEAR -> calendar.add(Calendar.YEAR, -1)
+            ALL -> Unit
+        }
+        return calendar.timeInMillis
+    }
+
+    companion object {
+        fun fromStored(raw: String?): TimeRange = entries.firstOrNull { it.name == raw } ?: WEEK
+    }
+}
 
 /**
  * 通知類型。優先採用系統給的 category，取不到才從內容推導。

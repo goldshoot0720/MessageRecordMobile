@@ -93,10 +93,20 @@ private fun NotiGuardNavHost() {
             HomeScreen(
                 state = state,
                 iconFor = { pkg -> identity.icon(pkg) },
+                installedFor = { pkg -> identity.isInstalled(pkg) },
                 onToggleMaster = vm::setMaster,
                 onOpenSearch = { nav.navigate(Route.search()) },
                 onOpenApp = { nav.navigate(Route.appDetail(it.packageName, it.appLabel)) },
+                onOpenPopular = { app ->
+                    val label = if (identity.isInstalled(app.packageName)) {
+                        identity.label(app.packageName)
+                    } else {
+                        app.label
+                    }
+                    nav.navigate(Route.appDetail(app.packageName, label))
+                },
                 onOpenSettings = { context.startActivity(ListenerAccess.settingsIntent(context)) },
+                onTimeRange = vm::setTimeRange,
             )
         }
 
@@ -130,6 +140,7 @@ private fun NotiGuardNavHost() {
                 icon = identity.icon(pkg),
                 onBack = { nav.popBackStack() },
                 onSetFilter = vm::setFilter,
+                onSetTimeRange = vm::setTimeRange,
                 onOpenSearch = { nav.navigate(Route.search(pkg, label)) },
                 onSetBlocking = vm::setBlocking,
                 onOpenRecord = { nav.navigate(Route.recordDetail(it.id)) },
@@ -154,11 +165,31 @@ private fun NotiGuardNavHost() {
             val vm: SearchViewModel = viewModel(factory = NotiGuardViewModelFactory(repo, packageName = pkg))
             val query by vm.query.collectAsStateWithLifecycle()
             val filter by vm.filter.collectAsStateWithLifecycle()
+            val timeRange by vm.timeRange.collectAsStateWithLifecycle()
             val results by vm.results.collectAsStateWithLifecycle()
-            SearchScreen(label, query, filter, results, vm::setQuery, vm::setFilter, vm::retry,
+            val recent by vm.recentSearches.collectAsStateWithLifecycle()
+            SearchScreen(
+                appLabel = label,
+                query = query,
+                filter = filter,
+                timeRange = timeRange,
+                results = results,
+                recent = recent,
+                onQuery = vm::setQuery,
+                onFilter = vm::setFilter,
+                onTimeRange = vm::setTimeRange,
+                onRetry = vm::retry,
+                onCommit = vm::commitQuery,
+                onPickRecent = vm::pickRecent,
+                onRemoveRecent = vm::removeRecent,
+                onClearRecent = vm::clearRecent,
                 onBack = { nav.popBackStack() },
-                onOpenRecord = { nav.navigate(Route.recordDetail(it.id)) },
-                iconFor = { identity.icon(it) })
+                onOpenRecord = {
+                    vm.commitQuery()
+                    nav.navigate(Route.recordDetail(it.id))
+                },
+                iconFor = { identity.icon(it) },
+            )
         }
 
         composable(

@@ -66,7 +66,7 @@ class NotificationRecordingTest {
                 // Join actual listener writes; no timing-dependent sleeps.
                 awaitWrites(controller.get())
             }
-            dao.observeRecords(PACKAGE).first().size
+            dao.observeRecords(PACKAGE, 0L).first().size
         } finally {
             controller.destroy()
         }
@@ -122,10 +122,10 @@ class NotificationRecordingTest {
         try {
             repeat(20) { controller.get().onNotificationPosted(event(1, 2000L + it)) }
             awaitWrites(controller.get())
-            assertEquals(1, dao.observeRecords(PACKAGE).first().size)
+            assertEquals(1, dao.observeRecords(PACKAGE, 0L).first().size)
             controller.get().onNotificationRemoved(event(1, 2019))
             awaitWrites(controller.get())
-            org.junit.Assert.assertNotNull(dao.observeRecords(PACKAGE).first().single().removedAt)
+            org.junit.Assert.assertNotNull(dao.observeRecords(PACKAGE, 0L).first().single().removedAt)
         } finally { controller.destroy() }
     }
 
@@ -138,7 +138,7 @@ class NotificationRecordingTest {
             controller.get().onNotificationPosted(summary)
             awaitWrites(controller.get())
             assertEquals(0, controller.get().activeNotifications.size)
-            assertEquals(0, dao.observeRecords(PACKAGE).first().size)
+            assertEquals(0, dao.observeRecords(PACKAGE, 0L).first().size)
         } finally { controller.destroy() }
     }
 

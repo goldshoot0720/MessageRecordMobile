@@ -3,10 +3,17 @@ package com.notiguard.data
 import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.Calendar
 
 private val Context.dataStore by preferencesDataStore(name = "notiguard_prefs")
@@ -20,6 +27,10 @@ class NotiGuardRepository(
 ) {
 
     private val masterKey = booleanPreferencesKey("master_enabled")
+    private val recentSearchKey = stringPreferencesKey("recent_searches")
+    private val timeRangeKey = stringPreferencesKey("notification_time_range")
+    private val recentSearchGate = Mutex()
+    private val recentSearchWrites = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
 
     // ---------- 總開關 ----------
@@ -36,31 +47,76 @@ class NotiGuardRepository(
 
     // ---------- 首頁 ----------
 
-    val appSummaries: Flow<List<AppSummary>> = dao.observeAppSummaries()
+    /** 通知要看多遠。沒選過就是一週之內。 */
+    val timeRange: Flow<TimeRange> =
+        context.dataStore.data.map { TimeRange.fromStored(it[timeRangeKey]) }
 
-    val stats: Flow<GuardStats> = dao.observeStats()
+    suspend fun setTimeRange(range: TimeRange) {
+        context.dataStore.edit { it[timeRangeKey] = range.name }
+    }
+
+    fun appSummaries(since: Long): Flow<List<AppSummary>> = dao.observeAppSummaries(since)
+
+    fun stats(since: Long): Flow<GuardStats> = dao.observeStats(since)
 
     /** 今日已攔截則數。每次收集時以當下的當地零點計算。 */
     val blockedToday: Flow<Int> = dao.observeBlockedSince(startOfToday())
 
     // ---------- 應用程式頁 ----------
 
-    fun records(packageName: String, filter: RecordFilter): Flow<List<NotificationRecord>> =
+    fun records(packageName: String, filter: RecordFilter, since: Long = 0L): Flow<List<NotificationRecord>> =
         when (filter) {
-            RecordFilter.ALL -> dao.observeRecords(packageName)
-            RecordFilter.BLOCKED -> dao.observeRecords(packageName, blocked = true)
-            RecordFilter.ALLOWED -> dao.observeRecords(packageName, blocked = false)
+            RecordFilter.ALL -> dao.observeRecords(packageName, since)
+            RecordFilter.BLOCKED -> dao.observeRecords(packageName, blocked = true, since = since)
+            RecordFilter.ALLOWED -> dao.observeRecords(packageName, blocked = false, since = since)
         }
 
-    fun recordCount(packageName: String): Flow<Int> = dao.observeCount(packageName)
+    fun recordCount(packageName: String, since: Long = 0L): Flow<Int> = dao.observeCount(packageName, since)
 
-    fun searchRecords(query: String, packageName: String?, filter: RecordFilter): Flow<List<NotificationRecord>> =
+    fun searchRecords(
+        query: String,
+        packageName: String?,
+        filter: RecordFilter,
+        since: Long = 0L,
+    ): Flow<List<NotificationRecord>> =
         if (query.isBlank()) kotlinx.coroutines.flow.flowOf(emptyList())
         else dao.searchRecords(query.trim(), packageName, when (filter) {
             RecordFilter.ALL -> null
             RecordFilter.BLOCKED -> true
             RecordFilter.ALLOWED -> false
-        })
+        }, since)
+
+    /** 搜尋通知頁的最近關鍵字，最新在前。 */
+    val recentSearches: Flow<List<String>> =
+        context.dataStore.data.map { RecentSearches.decode(it[recentSearchKey]) }
+
+    /**
+     * 離開頁面時 ViewModel 可能立刻被取消，所以這筆寫入不跟畫面的協程走。
+     * 空白關鍵字直接略過。
+     */
+    fun enqueueRememberSearch(query: String) {
+        if (query.isBlank()) return
+        recentSearchWrites.launch { rememberSearch(query) }
+    }
+
+    suspend fun rememberSearch(query: String) = recentSearchGate.withLock {
+        context.dataStore.edit { prefs ->
+            val current = RecentSearches.decode(prefs[recentSearchKey])
+            val next = RecentSearches.remember(current, query)
+            if (next != current) prefs[recentSearchKey] = RecentSearches.encode(next)
+        }
+    }
+
+    suspend fun forgetSearch(query: String) = recentSearchGate.withLock {
+        context.dataStore.edit { prefs ->
+            val next = RecentSearches.forget(RecentSearches.decode(prefs[recentSearchKey]), query)
+            prefs[recentSearchKey] = RecentSearches.encode(next)
+        }
+    }
+
+    suspend fun clearRecentSearches() = recentSearchGate.withLock {
+        context.dataStore.edit { it.remove(recentSearchKey) }
+    }
 
     fun rule(packageName: String): Flow<AppRule?> = dao.observeRule(packageName)
 
