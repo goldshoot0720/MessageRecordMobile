@@ -582,10 +582,13 @@ fun TimeRangeBar(
     selected: TimeRange,
     onSelect: (TimeRange) -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
+    val vertical = if (compact) 4.dp else 8.dp
+    val horizontal = if (compact) 11.dp else 14.dp
     LazyRow(
         modifier = modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp),
+        contentPadding = PaddingValues(horizontal = if (compact) 16.dp else 20.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         items(TimeRange.entries, key = { it.name }) { range ->
@@ -605,9 +608,9 @@ fun TimeRangeBar(
                     .background(background)
                     .border(1.dp, if (active) NG.blueLight.copy(alpha = 0.5f) else NG.lineSoft, CircleShape)
                     .selectable(selected = active, role = Role.Tab, onClick = { onSelect(range) })
-                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                    .padding(horizontal = horizontal, vertical = vertical),
                 color = content,
-                fontSize = 13.sp,
+                fontSize = if (compact) 12.sp else 13.sp,
                 fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
             )
         }
@@ -622,6 +625,7 @@ fun <T> SegmentedTabs(
     onSelect: (T) -> Unit,
     modifier: Modifier = Modifier,
     iconFor: (T) -> Int? = { null },
+    compact: Boolean = false,
 ) {
     Row(
         modifier = modifier
@@ -650,7 +654,7 @@ fun <T> SegmentedTabs(
                     .clip(RoundedCornerShape(9.dp))
                     .background(background)
                     .selectable(selected = active, role = Role.Tab, onClick = { onSelect(value) })
-                    .padding(vertical = 13.dp),
+                    .padding(vertical = if (compact) 6.dp else 13.dp),
                 horizontalArrangement = Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -660,7 +664,7 @@ fun <T> SegmentedTabs(
                 }
                 Text(
                     text = label,
-                    fontSize = 13.5f.sp,
+                    fontSize = if (compact) 12.5f.sp else 13.5f.sp,
                     fontWeight = if (active) FontWeight.Medium else FontWeight.Normal,
                     color = content,
                 )

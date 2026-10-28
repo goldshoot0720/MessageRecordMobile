@@ -31,6 +31,7 @@ data class HomeUiState(
     val blockedToday: Int = 0,
     val apps: List<AppSummary> = emptyList(),
     val timeRange: TimeRange = TimeRange.WEEK,
+    val records: List<NotificationRecord> = emptyList(),
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -43,8 +44,9 @@ class HomeViewModel(private val repo: NotiGuardRepository) : ViewModel() {
             repo.stats(since),
             repo.blockedToday,
             repo.appSummaries(since),
-        ) { master, stats, today, apps ->
-            HomeUiState(master, stats, today, apps, range)
+            repo.recentRecords(since),
+        ) { master, stats, today, apps, records ->
+            HomeUiState(master, stats, today, apps, range, records)
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 

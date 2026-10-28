@@ -97,6 +97,7 @@ private fun NotiGuardNavHost() {
                 onToggleMaster = vm::setMaster,
                 onOpenSearch = { nav.navigate(Route.search()) },
                 onOpenApp = { nav.navigate(Route.appDetail(it.packageName, it.appLabel)) },
+                onOpenRecord = { nav.navigate(Route.recordDetail(it.id)) },
                 onOpenPopular = { app ->
                     val label = if (identity.isInstalled(app.packageName)) {
                         identity.label(app.packageName)

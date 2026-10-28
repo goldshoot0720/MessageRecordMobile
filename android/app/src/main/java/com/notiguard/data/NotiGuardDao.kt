@@ -58,6 +58,16 @@ interface NotiGuardDao {
     )
     fun observeAppSummaries(since: Long): Flow<List<AppSummary>>
 
+    /** 時間範圍內的通知，新的在前。首頁訊息主區用。 */
+    @Query(
+        """
+        SELECT * FROM records
+        WHERE postedAt >= :since
+        ORDER BY postedAt DESC, id DESC
+        """
+    )
+    fun observeRecentRecords(since: Long): Flow<List<NotificationRecord>>
+
     @Query(
         """
         SELECT COUNT(*)                                   AS total,

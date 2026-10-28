@@ -57,6 +57,8 @@ class NotiGuardRepository(
 
     fun appSummaries(since: Long): Flow<List<AppSummary>> = dao.observeAppSummaries(since)
 
+    fun recentRecords(since: Long): Flow<List<NotificationRecord>> = dao.observeRecentRecords(since)
+
     fun stats(since: Long): Flow<GuardStats> = dao.observeStats(since)
 
     /** 今日已攔截則數。每次收集時以當下的當地零點計算。 */
